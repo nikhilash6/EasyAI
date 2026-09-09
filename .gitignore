@@ -74,7 +74,10 @@ so.txt
 *.bak
 dist-trim/
 build-trim/
-.claude/settings.local.json
+
+# --- Claude Code project files ---------------------------------------------
+# Local tooling config (agents, commands, settings) - not part of the app.
+.claude/
 
 # --- Kept on purpose ------------------------------------------------------
 # Listed explicitly so a later edit, or a generic template pasted over this
