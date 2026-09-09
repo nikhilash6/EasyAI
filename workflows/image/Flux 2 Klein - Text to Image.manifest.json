@@ -1,0 +1,50 @@
+{
+  "version": 3,
+  "name": "Flux 2 Klein - Text to Image",
+  "mode": "image",
+  "engine": "flux2-klein",
+  "bindings": {
+    "prompt": {
+      "node": "4",
+      "input": "value"
+    },
+    "model": {
+      "node": "1",
+      "input": "unet_name"
+    },
+    "width": {
+      "node": "8",
+      "input": "width"
+    },
+    "height": {
+      "node": "8",
+      "input": "height"
+    },
+    "ratio": {
+      "node": "15",
+      "input": "aspect_ratio"
+    },
+    "megapixels": {
+      "node": "15",
+      "input": "megapixels"
+    },
+    "seed": {
+      "node": "10",
+      "input": "noise_seed"
+    },
+    "output": {
+      "node": "14",
+      "input": "filename_prefix"
+    }
+  },
+  "labels": {},
+  "optional_slots": [],
+  "length_unit": "frames",
+  "fps": null,
+  "expose": [
+    "prompt"
+  ],
+  "ambiguous": [],
+  "autodetected": false,
+  "notes": ""
+}

@@ -1,0 +1,53 @@
+{
+  "version": 3,
+  "name": "LTX 2.3 Video Upscale - GarionHK",
+  "mode": "video",
+  "engine": "ltx2",
+  "bindings": {
+    "prompt": {
+      "node": "672:422",
+      "input": "text"
+    },
+    "negative": {
+      "node": "672:420",
+      "input": "text"
+    },
+    "video_in": {
+      "node": "2",
+      "input": "video"
+    },
+    "model": {
+      "node": "672:435",
+      "input": "ckpt_name"
+    },
+    "width": {
+      "node": "9",
+      "input": "value"
+    },
+    "height": {
+      "node": "673",
+      "input": "value"
+    },
+    "seed": {
+      "node": "672:411",
+      "input": "noise_seed"
+    },
+    "output": {
+      "node": "671",
+      "input": "filename_prefix"
+    }
+  },
+  "labels": {
+    "video_in": "Load Video (Upload) 🎥🅥🅗🅢"
+  },
+  "optional_slots": [],
+  "length_unit": "frames",
+  "fps": 24,
+  "expose": [
+    "prompt",
+    "video_in"
+  ],
+  "ambiguous": [],
+  "autodetected": false,
+  "notes": ""
+}

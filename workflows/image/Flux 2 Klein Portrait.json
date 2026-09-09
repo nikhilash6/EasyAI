@@ -1,0 +1,292 @@
+{
+  "76": {
+    "inputs": {
+      "image": "14.jpg"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "94": {
+    "inputs": {
+      "filename_prefix": "photobooth\\ComfyUI",
+      "images": [
+        "122:103",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
+  "109": {
+    "inputs": {
+      "upscale_method": "nearest-exact",
+      "megapixels": 1,
+      "resolution_steps": 1,
+      "image": [
+        "76",
+        0
+      ]
+    },
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "ImageScaleToTotalPixels"
+    }
+  },
+  "121": {
+    "inputs": {
+      "value": "Realistic photo of the person from image 1 in Gintoki Sakata (Gintama) costume — a loose white and dark kimono-style outfit worn casually off one shoulder, red haori jacket draped over it, natural spiky silver-gray hair, half-lidded lazy eyes, a bored yet mischievous expression, a candy stick (amanatto or a lollipop) resting in the corner of his mouth — standing in a relaxed, slouched pose with hands in his pockets. The person is looking at the camera. A quiet Edo-era Japanese street with wooden shops and paper lanterns, warm afternoon sunlight, cinematic lighting."
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "String (Multiline)"
+    }
+  },
+  "124": {
+    "inputs": {
+      "prepend": "",
+      "prompts": "",
+      "append": ""
+    },
+    "class_type": "SimplePromptBatcher",
+    "_meta": {
+      "title": "📝 Simple Prompt Batcher"
+    }
+  },
+  "122:99": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "122:104": {
+    "inputs": {
+      "noise_seed": 858814883716794
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "RandomNoise"
+    }
+  },
+  "122:108": {
+    "inputs": {
+      "vae_name": "flux2-vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "122:120": {
+    "inputs": {
+      "clip_name": "Flux 2\\Qwen3-8B-Q4_K_M.gguf",
+      "type": "flux2"
+    },
+    "class_type": "CLIPLoaderGGUF",
+    "_meta": {
+      "title": "CLIPLoader (GGUF)"
+    }
+  },
+  "122:119": {
+    "inputs": {
+      "unet_name": "Flux 2\\flux-2-klein-9b-Q8_0.gguf"
+    },
+    "class_type": "UnetLoaderGGUF",
+    "_meta": {
+      "title": "Unet Loader (GGUF)"
+    }
+  },
+  "122:107": {
+    "inputs": {
+      "text": [
+        "121",
+        0
+      ],
+      "clip": [
+        "122:120",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "110:78": {
+    "inputs": {
+      "pixels": [
+        "109",
+        0
+      ],
+      "vae": [
+        "122:108",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "122:113": {
+    "inputs": {
+      "image": [
+        "109",
+        0
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "Get Image Size"
+    }
+  },
+  "122:111": {
+    "inputs": {
+      "conditioning": [
+        "122:107",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "ConditioningZeroOut"
+    }
+  },
+  "110:77": {
+    "inputs": {
+      "conditioning": [
+        "122:107",
+        0
+      ],
+      "latent": [
+        "110:78",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "ReferenceLatent"
+    }
+  },
+  "122:100": {
+    "inputs": {
+      "steps": 4,
+      "width": [
+        "122:113",
+        0
+      ],
+      "height": [
+        "122:113",
+        1
+      ]
+    },
+    "class_type": "Flux2Scheduler",
+    "_meta": {
+      "title": "Flux2Scheduler"
+    }
+  },
+  "122:112": {
+    "inputs": {
+      "width": [
+        "122:113",
+        0
+      ],
+      "height": [
+        "122:113",
+        1
+      ],
+      "batch_size": 1
+    },
+    "class_type": "EmptyFlux2LatentImage",
+    "_meta": {
+      "title": "Empty Flux 2 Latent"
+    }
+  },
+  "110:76": {
+    "inputs": {
+      "conditioning": [
+        "122:111",
+        0
+      ],
+      "latent": [
+        "110:78",
+        0
+      ]
+    },
+    "class_type": "ReferenceLatent",
+    "_meta": {
+      "title": "ReferenceLatent"
+    }
+  },
+  "122:101": {
+    "inputs": {
+      "cfg": 1,
+      "model": [
+        "122:119",
+        0
+      ],
+      "positive": [
+        "110:77",
+        0
+      ],
+      "negative": [
+        "110:76",
+        0
+      ]
+    },
+    "class_type": "CFGGuider",
+    "_meta": {
+      "title": "CFGGuider"
+    }
+  },
+  "122:102": {
+    "inputs": {
+      "noise": [
+        "122:104",
+        0
+      ],
+      "guider": [
+        "122:101",
+        0
+      ],
+      "sampler": [
+        "122:99",
+        0
+      ],
+      "sigmas": [
+        "122:100",
+        0
+      ],
+      "latent_image": [
+        "122:112",
+        0
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "SamplerCustomAdvanced"
+    }
+  },
+  "122:103": {
+    "inputs": {
+      "samples": [
+        "122:102",
+        0
+      ],
+      "vae": [
+        "122:108",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  }
+}

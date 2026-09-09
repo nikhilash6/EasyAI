@@ -1,0 +1,43 @@
+{
+  "_comment": [
+    "Download URLs for models that ComfyUI's bundled templates and the",
+    "ComfyUI-Manager registry do not know about. filename -> direct URL.",
+    "",
+    "Run tools/verify_urls.py after editing: it HEAD-checks every URL and",
+    "compares the reported size with the file on this machine, so a link that",
+    "points at the wrong build is caught before anyone downloads 20 GB of it.",
+    "That check is not a formality - unsloth's copy of Qwen3-8B-Q4_K_M.gguf is",
+    "1,024 bytes different from the one this machine runs, so the official Qwen",
+    "repository is the one recorded below.",
+    "",
+    "Entries set to null still need a URL. Civitai links need an API key and",
+    "take the form https://civitai.com/api/download/models/<versionId>."
+  ],
+  "flux-2-klein-9b-Q8_0.gguf": "https://huggingface.co/unsloth/FLUX.2-klein-9B-GGUF/resolve/main/flux-2-klein-9b-Q8_0.gguf",
+  "minimax_h3_fl2va_pruned_int8_convrot.safetensors": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+  "gemma4_e2b_it_bf16.safetensors": "https://huggingface.co/Comfy-Org/gemma-4/resolve/main/text_encoders/gemma4_e2b_it_bf16.safetensors",
+  "minimax_h3_turbo_4step_ema_ckpt500_pruned_comfyui.safetensors": "https://huggingface.co/drbaph/MiniMax-H3-Turbo-Lora-ComfyUI/resolve/main/minimax_h3_turbo_4step_ema_ckpt500_pruned_comfyui.safetensors",
+  "Qwen3-8B-Q4_K_M.gguf": "https://huggingface.co/Qwen/Qwen3-8B-GGUF/resolve/main/Qwen3-8B-Q4_K_M.gguf",
+  "qwen_3_06b_base.safetensors": "https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/text_encoders/qwen_3_06b_base.safetensors",
+  "anima_baseV10.safetensors": "https://huggingface.co/LyliaEngine/anima_baseV10/resolve/main/anima_baseV10.safetensors",
+  "krea2_turbo_int8_convrot.safetensors": "https://huggingface.co/Comfy-Org/Krea-2/resolve/main/diffusion_models/krea2_turbo_int8_convrot.safetensors",
+  "krea2_identity_edit_v1_2.safetensors": "https://huggingface.co/conradlocke/krea2-identity-edit/resolve/main/krea2_identity_edit_v1_2.safetensors",
+  "ltx-2.3-22b-distilled-lora-dynamic_fro09_avg_rank_105_bf16.safetensors": "https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/loras/ltx-2.3-22b-distilled-lora-dynamic_fro09_avg_rank_105_bf16.safetensors",
+  "LTX2.3_Crisp_Enhance.safetensors": "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Crisp_Enhance_Style_LoRa/resolve/main/LTX2.3_Crisp_Enhance.safetensors",
+  "minimax_h3_turbo_v4_step600.safetensors": "https://huggingface.co/larryvrh/MiniMax-H3-Turbo-Lora/resolve/main/minimax_h3_turbo_v4_step600.safetensors",
+  "krea2RealVae_v10.safetensors": "https://huggingface.co/artsyww/KREA2REALVAE/resolve/main/krea2RealVae_v10.safetensors",
+  "anima-turbo-lora-v0.2.safetensors": "https://civitai.com/api/download/models/2979642",
+  "_civitai_note": [
+    "KNP_000003000.safetensors replaced the old Krea2 NSFW+ lora in",
+    "'Krea 2 t2i.json'. The address supplied used civitai.red, which is an",
+    "unofficial mirror and answers 403; the official civitai.com serves the",
+    "same model and file ids, so that is what is recorded here.",
+    "",
+    "This one redirects to auth.civitai.com without a key, unlike the Anima",
+    "lora above which downloads anonymously - so it is marked gated and needs",
+    "a Civitai API key entered in the Setup window."
+  ],
+  "KNP_000003000.safetensors": "https://civitai.com/api/download/models/3147117?fileId=3027612",
+  "qwen3vl_4b_fp8_scaled.safetensors": "https://huggingface.co/Comfy-Org/Qwen3-VL/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors",
+  "qwen_image_vae.safetensors": "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/vae/qwen_image_vae.safetensors"
+}

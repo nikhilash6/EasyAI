@@ -1,0 +1,53 @@
+{
+  "version": 3,
+  "name": "Krea2Edit - ID Transfer",
+  "mode": "image",
+  "engine": "krea2",
+  "bindings": {
+    "prompt": {
+      "node": "277",
+      "input": "value"
+    },
+    "negative": {
+      "node": "292:279",
+      "input": "prompt"
+    },
+    "image_in": {
+      "node": "104",
+      "input": "image"
+    },
+    "model": {
+      "node": "73",
+      "input": "unet_name"
+    },
+    "ratio": {
+      "node": "294",
+      "input": "aspect_ratio"
+    },
+    "megapixels": {
+      "node": "294",
+      "input": "megapixels"
+    },
+    "seed": {
+      "node": "292:285",
+      "input": "seed"
+    },
+    "output": {
+      "node": "157",
+      "input": "filename_prefix"
+    }
+  },
+  "labels": {
+    "image_in": "Picture"
+  },
+  "optional_slots": [],
+  "length_unit": "frames",
+  "fps": 8,
+  "expose": [
+    "prompt",
+    "image_in"
+  ],
+  "ambiguous": [],
+  "autodetected": false,
+  "notes": ""
+}

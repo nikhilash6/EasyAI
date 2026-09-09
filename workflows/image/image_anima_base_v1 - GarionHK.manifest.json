@@ -1,0 +1,46 @@
+{
+  "version": 3,
+  "name": "Anima - Text to Image",
+  "mode": "image",
+  "engine": "qwen-image",
+  "bindings": {
+    "prompt": {
+      "node": "90:77",
+      "input": "text"
+    },
+    "negative": {
+      "node": "90:75",
+      "input": "text"
+    },
+    "model": {
+      "node": "90:78",
+      "input": "unet_name"
+    },
+    "ratio": {
+      "node": "91",
+      "input": "aspect_ratio"
+    },
+    "megapixels": {
+      "node": "91",
+      "input": "megapixels"
+    },
+    "seed": {
+      "node": "90:76",
+      "input": "seed"
+    },
+    "output": {
+      "node": "46",
+      "input": "filename_prefix"
+    }
+  },
+  "labels": {},
+  "optional_slots": [],
+  "length_unit": "frames",
+  "fps": 16,
+  "expose": [
+    "prompt"
+  ],
+  "ambiguous": [],
+  "autodetected": false,
+  "notes": ""
+}

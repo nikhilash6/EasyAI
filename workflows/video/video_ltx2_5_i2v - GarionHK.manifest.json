@@ -1,0 +1,68 @@
+{
+  "version": 3,
+  "name": "LTX 2.5 Image to Video",
+  "mode": "video",
+  "engine": "ltx2.5",
+  "bindings": {
+    "prompt": {
+      "node": "398:376",
+      "input": "value"
+    },
+    "negative": {
+      "node": "398:373",
+      "input": "text"
+    },
+    "image_in": {
+      "node": "395",
+      "input": "image"
+    },
+    "model": {
+      "node": "398:384",
+      "input": "unet_name"
+    },
+    "ratio": {
+      "node": "403",
+      "input": "aspect_ratio"
+    },
+    "megapixels": {
+      "node": "403",
+      "input": "megapixels"
+    },
+    "seed": [
+      {
+        "node": "398:339",
+        "input": "noise_seed"
+      },
+      {
+        "node": "398:338",
+        "input": "noise_seed"
+      }
+    ],
+    "length": {
+      "node": "398:362",
+      "input": "value"
+    },
+    "enhancer": {
+      "node": "398:380",
+      "input": "max_length"
+    },
+    "output": {
+      "node": "75",
+      "input": "filename_prefix"
+    }
+  },
+  "labels": {
+    "image_in": "Load First Frame"
+  },
+  "optional_slots": [],
+  "length_unit": "seconds",
+  "fps": 24,
+  "expose": [
+    "prompt",
+    "image_in",
+    "length"
+  ],
+  "ambiguous": [],
+  "autodetected": false,
+  "notes": ""
+}

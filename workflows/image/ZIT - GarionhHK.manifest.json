@@ -1,0 +1,46 @@
+{
+  "version": 3,
+  "name": "Z-Image Turbo - Text to Image",
+  "mode": "image",
+  "engine": "z-image-turbo",
+  "bindings": {
+    "prompt": {
+      "node": "20",
+      "input": "value"
+    },
+    "negative": {
+      "node": "18",
+      "input": "text"
+    },
+    "model": {
+      "node": "16",
+      "input": "unet_name"
+    },
+    "ratio": {
+      "node": "31",
+      "input": "aspect_ratio"
+    },
+    "megapixels": {
+      "node": "31",
+      "input": "megapixels"
+    },
+    "seed": {
+      "node": "12",
+      "input": "seed"
+    },
+    "output": {
+      "node": "29",
+      "input": "filename_prefix"
+    }
+  },
+  "labels": {},
+  "optional_slots": [],
+  "length_unit": "frames",
+  "fps": 8,
+  "expose": [
+    "prompt"
+  ],
+  "ambiguous": [],
+  "autodetected": false,
+  "notes": ""
+}

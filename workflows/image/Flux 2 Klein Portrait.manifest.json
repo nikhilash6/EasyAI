@@ -1,0 +1,45 @@
+{
+  "version": 3,
+  "name": "Flux 2 Klein - Image Edit",
+  "mode": "image",
+  "engine": "flux2-klein",
+  "bindings": {
+    "prompt": {
+      "node": "121",
+      "input": "value"
+    },
+    "image_in": {
+      "node": "76",
+      "input": "image"
+    },
+    "model": {
+      "node": "122:119",
+      "input": "unet_name"
+    },
+    "megapixels": {
+      "node": "109",
+      "input": "megapixels"
+    },
+    "seed": {
+      "node": "122:104",
+      "input": "noise_seed"
+    },
+    "output": {
+      "node": "94",
+      "input": "filename_prefix"
+    }
+  },
+  "labels": {
+    "image_in": "Picture"
+  },
+  "optional_slots": [],
+  "length_unit": "frames",
+  "fps": null,
+  "expose": [
+    "prompt",
+    "image_in"
+  ],
+  "ambiguous": [],
+  "autodetected": false,
+  "notes": ""
+}

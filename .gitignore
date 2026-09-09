@@ -1,0 +1,90 @@
+# What does not belong in the repository.
+#
+# Two things here differ from the usual Python .gitignore, and both matter:
+#
+#   * The .spec files are SOURCE. The standard template ignores *.spec because
+#     PyInstaller usually generates them; ours are hand-written, name what goes
+#     into each build and what is left out, and "Build EXE.bat" will not run
+#     without them. They are listed as kept at the bottom of this file.
+#   * The release zips are around 112 MB each. GitHub refuses any file over
+#     100 MB, so leaving them out is what lets a push succeed at all. Put built
+#     programs on a Releases page instead of in the tree.
+
+# --- Python ---------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# --- Build output ---------------------------------------------------------
+# PyInstaller's working folder and the finished programs: ~170 MB, rebuilt from
+# source at any time by "Build EXE.bat".
+build/
+dist/
+
+# --- Releases -------------------------------------------------------------
+# The packaged folders and zips handed to viewers. Too big for the tree, and
+# regenerated for every version.
+EasyAI - V*/
+EasyAI - V*.zip
+*.7z
+
+# --- The user's own things ------------------------------------------------
+# settings.json holds absolute paths to this machine's ComfyUI, the remembered
+# seeds and the chosen models. Committing it would point everyone else's copy
+# at folders that do not exist for them.
+settings.json
+easyai-setup.json
+
+# Everything made with EasyAI: pictures, videos and enhanced prompts. Large,
+# personal, and none of it is source.
+output/
+
+# --- Downloads and staging ------------------------------------------------
+# Gated models copied here before being uploaded to the mirror - tens of GB.
+mirror-staging/
+# A part-finished download from EasyAI Setup.
+*.part
+
+# --- Windows --------------------------------------------------------------
+# Shortcuts embed the absolute path of the machine that made them, so they are
+# useless to anyone else. The .bat launchers beside them are the portable
+# version and ARE committed.
+*.lnk
+Thumbs.db
+desktop.ini
+
+# --- Credentials ----------------------------------------------------------
+# EasyAI Setup asks for the HuggingFace and Civitai keys each run and never
+# writes them down, so there is no key file to lose. These are here so that
+# stays true if that ever changes.
+.env
+*.key
+*.pem
+secrets.json
+
+# --- Scratch --------------------------------------------------------------
+# Left behind by shell redirects while working on the build; safe to delete.
+se.txt
+so.txt
+*.log
+*.tmp
+*.bak
+dist-trim/
+build-trim/
+.claude/settings.local.json
+
+# --- Kept on purpose ------------------------------------------------------
+# Listed explicitly so a later edit, or a generic template pasted over this
+# file, cannot quietly drop them.
+!EasyAI.spec
+!EasyAI Setup.spec
+!EasyAI Studio.spec
+!build_common.py
+!workflows/**/*.json
+!lang/*.json
+!setup/catalog.json
+!setup/mirror_links.json
+!setup/url_overrides.json

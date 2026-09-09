@@ -1,0 +1,8 @@
+PySide6>=6.6
+requests>=2.31
+websocket-client>=1.7
+Pillow>=10.0
+
+# EasyAISetup only: unpacks the ComfyUI portable .7z when 7-Zip is not
+# installed. Pure Python, so it needs no compiler.
+py7zr>=1.0

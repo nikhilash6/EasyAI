@@ -1,0 +1,32 @@
+{
+  "_comment": [
+    "Copies of the models that sit behind a sign-in, hosted so viewers do not",
+    "need an account. filename -> full download URL.",
+    "",
+    "Only files that need an account belong here. Mirroring an open model just",
+    "spends bandwidth for no gain - it would download fine from its own home.",
+    "",
+    "These are ownCloud share links: the token is opaque and changes if the file",
+    "is deleted and re-uploaded, so after ANY change to the server run:",
+    "    python tools/verify_urls.py --mirror",
+    "which checks the size, proves Range/resume works, and refuses links that",
+    "point at a private address no viewer could reach.",
+    "",
+    "The installer tries the mirror first and falls back to the original source,",
+    "so a broken link here degrades to 'needs an API key', never to a failure."
+  ],
+
+  "ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors": "https://focaltek.com/owncloud/index.php/s/7JvMnZOavBz6313/download",
+  "gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors": "https://focaltek.com/owncloud/index.php/s/bVo63mKnrp9rmX5/download",
+  "ltx-2.5-video-vae-bf16.safetensors": "https://focaltek.com/owncloud/index.php/s/ItOUnvWjFa9TDkC/download",
+  "ltx-2.5-audio-vae-bf16.safetensors": "https://focaltek.com/owncloud/index.php/s/yvvq5cZ2dU8OxVG/download",
+  "ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors": "https://focaltek.com/owncloud/index.php/s/Dl6WCNmL85R33Lw/download",
+  "KNP_000003000.safetensors": "https://focaltek.com/owncloud/index.php/s/kIMIPiUNsBlJE1f/download",
+
+  "_deliberately_not_mirrored": [
+    "gemma4_e2b_it_bf16.safetensors is NOT gated - it downloads freely from",
+    "Comfy-Org/gemma-4 under Apache 2.0, so mirroring it would spend storage and",
+    "bandwidth for nothing. It is a different model from",
+    "gemma4-12b-with-proj-ltx-2.5 above, which is the gated one."
+  ]
+}

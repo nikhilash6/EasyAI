@@ -1,0 +1,406 @@
+{
+  "73": {
+    "inputs": {
+      "unet_name": "Flux Krea 2\\krea2_turbo_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "74": {
+    "inputs": {
+      "clip_name": "Flux Krea 2\\qwen3vl_4b_fp8_scaled.safetensors",
+      "type": "krea2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "102": {
+    "inputs": {
+      "lora_name": "Flux Krea 2\\krea2_identity_edit_v1_2.safetensors",
+      "strength_model": 1,
+      "model": [
+        "73",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "104": {
+    "inputs": {
+      "image": "Kera2Edit_00061_.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "157": {
+    "inputs": {
+      "filename_prefix": "ComfyUI/Kera2Edit",
+      "images": [
+        "292:284",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
+  "277": {
+    "inputs": {
+      "value": "A young woman with long, dark hair, in a Wonder Woman red / golden costume with no other clothing, standing before the ancient marble columns and majestic coastal cliffs of Themyscira. In the background, ornate Greco-Roman temples, braziers with gentle flickering flames, and lush Mediterranean flora are bathed in a warm, triumphant golden hour glow against soft-focus mountain peaks and classical architecture. The scene remains static with no movement or change occurring in the environment or her posture."
+    },
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "Text (Multiline)"
+    }
+  },
+  "294": {
+    "inputs": {
+      "aspect_ratio": "16:9 (Widescreen)",
+      "megapixels": 1,
+      "multiple": 32
+    },
+    "class_type": "ResolutionSelector",
+    "_meta": {
+      "title": "Resolution Selector"
+    }
+  },
+  "274:262": {
+    "inputs": {
+      "image": [
+        "274:259",
+        0
+      ]
+    },
+    "class_type": "GetImageSize+",
+    "_meta": {
+      "title": "🔧 Get Image Size"
+    }
+  },
+  "274:250": {
+    "inputs": {
+      "left": [
+        "274:268",
+        1
+      ],
+      "top": 0,
+      "right": 0,
+      "bottom": [
+        "274:269",
+        1
+      ],
+      "feathering": 0,
+      "image": [
+        "274:259",
+        0
+      ]
+    },
+    "class_type": "ImagePadForOutpaint",
+    "_meta": {
+      "title": "Pad Image for Outpainting"
+    }
+  },
+  "274:251": {
+    "inputs": {
+      "image": [
+        "274:259",
+        0
+      ]
+    },
+    "class_type": "GetImageSize+",
+    "_meta": {
+      "title": "🔧 Get Image Size"
+    }
+  },
+  "274:268": {
+    "inputs": {
+      "expression": "a - b",
+      "values.a": [
+        "294",
+        0
+      ],
+      "values.b": [
+        "274:251",
+        0
+      ]
+    },
+    "class_type": "ComfyMathExpression",
+    "_meta": {
+      "title": "Math Expression"
+    }
+  },
+  "274:269": {
+    "inputs": {
+      "expression": "a - b",
+      "values.a": [
+        "294",
+        1
+      ],
+      "values.b": [
+        "274:262",
+        1
+      ]
+    },
+    "class_type": "ComfyMathExpression",
+    "_meta": {
+      "title": "Math Expression"
+    }
+  },
+  "274:259": {
+    "inputs": {
+      "width": [
+        "294",
+        0
+      ],
+      "height": [
+        "294",
+        1
+      ],
+      "interpolation": "nearest",
+      "method": "keep proportion",
+      "condition": "always",
+      "multiple_of": 0,
+      "image": [
+        "104",
+        0
+      ]
+    },
+    "class_type": "ImageResize+",
+    "_meta": {
+      "title": "🔧 Image Resize"
+    }
+  },
+  "274:260": {
+    "inputs": {
+      "images": [
+        "274:259",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  },
+  "274:261": {
+    "inputs": {
+      "images": [
+        "274:250",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  },
+  "292:279": {
+    "inputs": {
+      "prompt": "",
+      "grounding_px": 768,
+      "system_prompt": "",
+      "clip": [
+        "74",
+        0
+      ],
+      "image": [
+        "292:291",
+        0
+      ]
+    },
+    "class_type": "Krea2EditGroundedEncode",
+    "_meta": {
+      "title": "Krea2 Edit (grounded encode)"
+    }
+  },
+  "292:280": {
+    "inputs": {
+      "images": [
+        "292:291",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  },
+  "292:281": {
+    "inputs": {
+      "image": [
+        "292:291",
+        0
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "Get Image Size"
+    }
+  },
+  "292:282": {
+    "inputs": {
+      "pixels": [
+        "292:291",
+        0
+      ],
+      "vae": [
+        "292:287",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "292:283": {
+    "inputs": {
+      "width": [
+        "292:281",
+        0
+      ],
+      "height": [
+        "292:281",
+        1
+      ],
+      "batch_size": 1
+    },
+    "class_type": "EmptySD3LatentImage",
+    "_meta": {
+      "title": "EmptySD3LatentImage"
+    }
+  },
+  "292:284": {
+    "inputs": {
+      "samples": [
+        "292:285",
+        0
+      ],
+      "vae": [
+        "292:287",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "292:285": {
+    "inputs": {
+      "seed": 363711609466452,
+      "steps": 8,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "292:286",
+        0
+      ],
+      "positive": [
+        "292:288",
+        0
+      ],
+      "negative": [
+        "292:279",
+        0
+      ],
+      "latent_image": [
+        "292:283",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "292:286": {
+    "inputs": {
+      "ref_boost": 4,
+      "ref_boost_a": 4,
+      "fit_mode": "fit",
+      "model": [
+        "102",
+        0
+      ],
+      "source_latent": [
+        "292:282",
+        0
+      ],
+      "vae": [
+        "292:287",
+        0
+      ],
+      "source_image": [
+        "292:291",
+        0
+      ]
+    },
+    "class_type": "Krea2EditModelPatch",
+    "_meta": {
+      "title": "Krea2 Edit (source patch)"
+    }
+  },
+  "292:287": {
+    "inputs": {
+      "vae_name": "Flux Krea 2\\krea2RealVae_v10.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "292:291": {
+    "inputs": {
+      "resize_type": "scale width",
+      "resize_type.width": [
+        "294",
+        0
+      ],
+      "scale_method": "area",
+      "input": [
+        "274:250",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "292:288": {
+    "inputs": {
+      "prompt": [
+        "277",
+        0
+      ],
+      "grounding_px": 768,
+      "system_prompt": "",
+      "clip": [
+        "74",
+        0
+      ],
+      "image": [
+        "292:291",
+        0
+      ]
+    },
+    "class_type": "Krea2EditGroundedEncode",
+    "_meta": {
+      "title": "Krea2 Edit (grounded encode)"
+    }
+  }
+}

@@ -1,0 +1,354 @@
+{
+  "generated": "tools/make_catalog.py",
+  "comfyui": {
+    "version": "0.33.0",
+    "commit": "7fe8a6138504f90ff7be82f3babf416da32876b1",
+    "portable": {
+      "release": "v0.33.1",
+      "asset": "ComfyUI_windows_portable_nvidia.7z",
+      "url": "https://github.com/Comfy-Org/ComfyUI/releases/download/v0.33.1/ComfyUI_windows_portable_nvidia.7z",
+      "bytes": 2133107036,
+      "cuda": "13.0",
+      "fallback": {
+        "asset": "ComfyUI_windows_portable_nvidia_cu126.7z",
+        "url": "https://github.com/Comfy-Org/ComfyUI/releases/download/v0.33.1/ComfyUI_windows_portable_nvidia_cu126.7z",
+        "bytes": 2075064363,
+        "cuda": "12.6",
+        "why": "for drivers too old for CUDA 13"
+      }
+    }
+  },
+  "groups": {
+    "image": {
+      "label": "Image",
+      "workflows": [
+        "Flux 2 Klein - Text to Image.json",
+        "Flux 2 Klein Portrait.json",
+        "image_anima_base_v1 - GarionHK.json",
+        "Kera2Edit - ID Transfer - GarionHK.json",
+        "Krea 2 t2i.json",
+        "ZIT - GarionhHK.json"
+      ],
+      "nodes": [
+        "ComfyUI-GGUF",
+        "comfyui-krea2edit",
+        "comfyui-simple-prompt-batcher",
+        "comfyui_essentials"
+      ],
+      "models": [
+        "Flux 2\\flux-2-klein-9b-Q8_0.gguf",
+        "Flux 2\\Qwen3-8B-Q4_K_M.gguf",
+        "Ideogram\\flux2-vae.safetensors",
+        "flux2-vae.safetensors",
+        "Anima\\qwen_3_06b_base.safetensors",
+        "Anima\\qwen_image_vae.safetensors",
+        "Anima\\anima_baseV10.safetensors",
+        "Anima\\anima-turbo-lora-v0.2.safetensors",
+        "Flux Krea 2\\krea2_turbo_int8_convrot.safetensors",
+        "Flux Krea 2\\qwen3vl_4b_fp8_scaled.safetensors",
+        "Flux Krea 2\\krea2_identity_edit_v1_2.safetensors",
+        "Flux Krea 2\\krea2RealVae_v10.safetensors",
+        "Flux Krea 2\\qwen_image_vae.safetensors",
+        "Flux Krea 2\\KNP_000003000.safetensors",
+        "ZIT\\qwen_3_4b.safetensors",
+        "ZI\\z_image_turbo_bf16.safetensors",
+        "ae.safetensors"
+      ],
+      "bytes": 63927650836
+    },
+    "video": {
+      "label": "Video",
+      "workflows": [
+        "LTX 2.3 Video Upscale - GarionHK.json",
+        "MiniMax H3 Reference to video Workflow - Turbo - GarionHK.json",
+        "Minimax_h3_FFLF2v - Turbo - GarionHK.json",
+        "Minimax_h3_i2v Turbo - GarionHK.json",
+        "Minimax_h3_t2v Turbo - GarionHK.json",
+        "video_ltx2_5_flf2v - GarionHK.json",
+        "video_ltx2_5_i2v - GarionHK.json",
+        "video_ltx2_5_t2v - GarionHK.json"
+      ],
+      "nodes": [
+        "ComfyUI_LayerStyle",
+        "comfyui-easy-use",
+        "comfyui-kjnodes",
+        "comfyui-spectrum-minimax-h3",
+        "comfyui-videohelpersuite"
+      ],
+      "models": [
+        "LTX\\ltx-2.3-22b-dev-fp8.safetensors",
+        "LTX\\ltx-2.3-22b-distilled-lora-dynamic_fro09_avg_rank_105_bf16.safetensors",
+        "LTX\\LTX2.3_Crisp_Enhance.safetensors",
+        "ltx-2.3-spatial-upscaler-x2-1.1.safetensors",
+        "minimax h3\\minimax_h3_video_vae_fp16.safetensors",
+        "minimax h3\\minimax_h3_audio_vae_fp32.safetensors",
+        "minimax h3\\minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+        "minimax h3\\qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+        "minimax h3\\minimax_h3_turbo_4step_ema_ckpt500_pruned_comfyui.safetensors",
+        "minimax h3\\minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+        "minimax h3\\minimax_h3_turbo_v4_step600.safetensors",
+        "LTX2.5\\ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors",
+        "LTX2.5\\ltx-2.5-video-vae-bf16.safetensors",
+        "LTX2.5\\ltx-2.5-audio-vae-bf16.safetensors",
+        "LTX2.5\\gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors",
+        "LTX2.5\\gemma4_e2b_it_bf16.safetensors",
+        "LTX2.5\\ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors"
+      ],
+      "bytes": 148262440659
+    },
+    "prompt-enhancer": {
+      "label": "Prompt Helper",
+      "workflows": [
+        "Krea 2 Prompt Enhancer.json"
+      ],
+      "nodes": [],
+      "models": [
+        "Flux Krea 2\\qwen3vl_4b_fp8_scaled.safetensors"
+      ],
+      "bytes": 5242467968
+    }
+  },
+  "nodes": {
+    "ComfyUI-GGUF": {
+      "source": "cnr",
+      "id": "ComfyUI-GGUF",
+      "version": "1.1.10",
+      "url": "https://cdn.comfy.org/city96/ComfyUI-GGUF/1.1.10/node.zip"
+    },
+    "ComfyUI_LayerStyle": {
+      "source": "git",
+      "url": "https://github.com/chflame163/ComfyUI_LayerStyle",
+      "commit": "64f976fec8492ea4930c0e30c32369573189b23d"
+    },
+    "comfyui-easy-use": {
+      "source": "cnr",
+      "id": "comfyui-easy-use",
+      "version": "1.3.6",
+      "url": "https://cdn.comfy.org/yolain/comfyui-easy-use/1.3.6/node.zip"
+    },
+    "comfyui-kjnodes": {
+      "source": "cnr",
+      "id": "comfyui-kjnodes",
+      "version": "1.5.0",
+      "url": "https://cdn.comfy.org/kijai/comfyui-kjnodes/1.5.0/node.zip"
+    },
+    "comfyui-krea2edit": {
+      "source": "git",
+      "url": "https://github.com/lbouaraba/comfyui-krea2edit",
+      "commit": "86f886dac23013d88996e3a2e99093ba44d322fb"
+    },
+    "comfyui-simple-prompt-batcher": {
+      "source": "cnr",
+      "id": "comfyui-simple-prompt-batcher",
+      "version": "1.0.4",
+      "url": "https://cdn.comfy.org/ai-joe-git/comfyui-simple-prompt-batcher/1.0.4/node.zip"
+    },
+    "comfyui-spectrum-minimax-h3": {
+      "source": "git",
+      "url": "https://github.com/xmarre/ComfyUI-Spectrum-MiniMax-H3",
+      "commit": "0ada18b3830b33cb6635f7e142831fcf779959fc"
+    },
+    "comfyui-videohelpersuite": {
+      "source": "cnr",
+      "id": "comfyui-videohelpersuite",
+      "version": "1.7.9",
+      "url": "https://cdn.comfy.org/kosinkadink/comfyui-videohelpersuite/1.7.9/node.zip"
+    },
+    "comfyui_essentials": {
+      "source": "cnr",
+      "id": "comfyui_essentials",
+      "version": "1.1.0",
+      "url": "https://cdn.comfy.org/matteo/comfyui_essentials/1.1.0/node.tar.gz"
+    }
+  },
+  "models": {
+    "Flux 2\\flux-2-klein-9b-Q8_0.gguf": {
+      "dir": "unet",
+      "bytes": 9978304800,
+      "url": "https://huggingface.co/unsloth/FLUX.2-klein-9B-GGUF/resolve/main/flux-2-klein-9b-Q8_0.gguf"
+    },
+    "Flux 2\\Qwen3-8B-Q4_K_M.gguf": {
+      "dir": "clip",
+      "bytes": 5027783488,
+      "url": "https://huggingface.co/Qwen/Qwen3-8B-GGUF/resolve/main/Qwen3-8B-Q4_K_M.gguf"
+    },
+    "Ideogram\\flux2-vae.safetensors": {
+      "dir": "vae",
+      "bytes": 336213556,
+      "url": "https://huggingface.co/Comfy-Org/flux2-dev/resolve/main/split_files/vae/flux2-vae.safetensors"
+    },
+    "flux2-vae.safetensors": {
+      "dir": "vae",
+      "bytes": 336213556,
+      "url": "https://huggingface.co/Comfy-Org/flux2-dev/resolve/main/split_files/vae/flux2-vae.safetensors"
+    },
+    "Anima\\qwen_3_06b_base.safetensors": {
+      "dir": "clip",
+      "bytes": 1192135096,
+      "url": "https://huggingface.co/circlestone-labs/Anima/resolve/main/split_files/text_encoders/qwen_3_06b_base.safetensors"
+    },
+    "Anima\\qwen_image_vae.safetensors": {
+      "dir": "vae",
+      "bytes": 253806246,
+      "url": "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/vae/qwen_image_vae.safetensors"
+    },
+    "Anima\\anima_baseV10.safetensors": {
+      "dir": "diffusion_models",
+      "bytes": 4182218328,
+      "url": "https://huggingface.co/LyliaEngine/anima_baseV10/resolve/main/anima_baseV10.safetensors"
+    },
+    "Anima\\anima-turbo-lora-v0.2.safetensors": {
+      "dir": "loras",
+      "bytes": 148902616,
+      "url": "https://civitai.com/api/download/models/2979642"
+    },
+    "Flux Krea 2\\krea2_turbo_int8_convrot.safetensors": {
+      "dir": "diffusion_models",
+      "bytes": 13492686496,
+      "url": "https://huggingface.co/Comfy-Org/Krea-2/resolve/main/diffusion_models/krea2_turbo_int8_convrot.safetensors"
+    },
+    "Flux Krea 2\\qwen3vl_4b_fp8_scaled.safetensors": {
+      "dir": "text_encoders",
+      "bytes": 5242467968,
+      "url": "https://huggingface.co/Comfy-Org/Qwen3-VL/resolve/main/text_encoders/qwen3vl_4b_fp8_scaled.safetensors"
+    },
+    "Flux Krea 2\\krea2_identity_edit_v1_2.safetensors": {
+      "dir": "loras",
+      "bytes": 1828256432,
+      "url": "https://huggingface.co/conradlocke/krea2-identity-edit/resolve/main/krea2_identity_edit_v1_2.safetensors"
+    },
+    "Flux Krea 2\\krea2RealVae_v10.safetensors": {
+      "dir": "vae",
+      "bytes": 507591212,
+      "url": "https://huggingface.co/artsyww/KREA2REALVAE/resolve/main/krea2RealVae_v10.safetensors"
+    },
+    "Flux Krea 2\\qwen_image_vae.safetensors": {
+      "dir": "vae",
+      "bytes": 253806246,
+      "url": "https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/vae/qwen_image_vae.safetensors"
+    },
+    "Flux Krea 2\\KNP_000003000.safetensors": {
+      "dir": "loras",
+      "bytes": 457111960,
+      "url": "https://civitai.com/api/download/models/3147117?fileId=3027612",
+      "gated": true,
+      "mirror": "https://focaltek.com/owncloud/index.php/s/kIMIPiUNsBlJE1f/download",
+      "sha256": "6ec564e04eed317ae24093b4907004ac59a7c528d19d025bb41b4d719c4d16ec"
+    },
+    "ZIT\\qwen_3_4b.safetensors": {
+      "dir": "clip",
+      "bytes": 8044982048,
+      "url": "https://huggingface.co/Comfy-Org/flux2-klein/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors"
+    },
+    "ZI\\z_image_turbo_bf16.safetensors": {
+      "dir": "diffusion_models",
+      "bytes": 12309866400,
+      "url": "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/diffusion_models/z_image_turbo_bf16.safetensors"
+    },
+    "ae.safetensors": {
+      "dir": "vae",
+      "bytes": 335304388,
+      "url": "https://huggingface.co/Comfy-Org/Lumina_Image_2.0_Repackaged/resolve/main/split_files/vae/ae.safetensors"
+    },
+    "LTX\\ltx-2.3-22b-dev-fp8.safetensors": {
+      "dir": "checkpoints",
+      "bytes": 29145431166,
+      "url": "https://huggingface.co/Lightricks/LTX-2.3-fp8/resolve/main/ltx-2.3-22b-dev-fp8.safetensors"
+    },
+    "LTX\\ltx-2.3-22b-distilled-lora-dynamic_fro09_avg_rank_105_bf16.safetensors": {
+      "dir": "loras",
+      "bytes": 2586318182,
+      "url": "https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/loras/ltx-2.3-22b-distilled-lora-dynamic_fro09_avg_rank_105_bf16.safetensors"
+    },
+    "LTX\\LTX2.3_Crisp_Enhance.safetensors": {
+      "dir": "loras",
+      "bytes": 705198392,
+      "url": "https://huggingface.co/vrgamedevgirl84/LTX_2.3_Crisp_Enhance_Style_LoRa/resolve/main/LTX2.3_Crisp_Enhance.safetensors"
+    },
+    "ltx-2.3-spatial-upscaler-x2-1.1.safetensors": {
+      "dir": "latent_upscale_models",
+      "bytes": 995743560,
+      "url": "https://huggingface.co/Lightricks/LTX-2.3/resolve/main/ltx-2.3-spatial-upscaler-x2-1.1.safetensors"
+    },
+    "minimax h3\\minimax_h3_video_vae_fp16.safetensors": {
+      "dir": "vae",
+      "bytes": 5207808496,
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors"
+    },
+    "minimax h3\\minimax_h3_audio_vae_fp32.safetensors": {
+      "dir": "vae",
+      "bytes": 605254808,
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors"
+    },
+    "minimax h3\\minimax_h3_ref2va_pruned_int8_convrot.safetensors": {
+      "dir": "diffusion_models",
+      "bytes": 20970379616,
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors"
+    },
+    "minimax h3\\qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors": {
+      "dir": "clip",
+      "bytes": 15687142551,
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors"
+    },
+    "minimax h3\\minimax_h3_turbo_4step_ema_ckpt500_pruned_comfyui.safetensors": {
+      "dir": "loras",
+      "bytes": 620285648,
+      "url": "https://huggingface.co/drbaph/MiniMax-H3-Turbo-Lora-ComfyUI/resolve/main/minimax_h3_turbo_4step_ema_ckpt500_pruned_comfyui.safetensors"
+    },
+    "minimax h3\\minimax_h3_fl2va_pruned_int8_convrot.safetensors": {
+      "dir": "diffusion_models",
+      "bytes": 20970379616,
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors"
+    },
+    "minimax h3\\minimax_h3_turbo_v4_step600.safetensors": {
+      "dir": "loras",
+      "bytes": 779849816,
+      "url": "https://huggingface.co/larryvrh/MiniMax-H3-Turbo-Lora/resolve/main/minimax_h3_turbo_v4_step600.safetensors"
+    },
+    "LTX2.5\\ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors": {
+      "dir": "diffusion_models",
+      "bytes": 21504034224,
+      "url": "https://huggingface.co/Lightricks/LTX-2.5/resolve/main/diffusion_models/ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors",
+      "gated": true,
+      "mirror": "https://focaltek.com/owncloud/index.php/s/7JvMnZOavBz6313/download",
+      "sha256": "c4279eeff115cbeaca494bd2183e7d768c38fe85a184dc6afbb7159157c44334"
+    },
+    "LTX2.5\\ltx-2.5-video-vae-bf16.safetensors": {
+      "dir": "vae",
+      "bytes": 1472223346,
+      "url": "https://huggingface.co/Lightricks/LTX-2.5/resolve/main/vae/ltx-2.5-video-vae-bf16.safetensors",
+      "gated": true,
+      "mirror": "https://focaltek.com/owncloud/index.php/s/ItOUnvWjFa9TDkC/download",
+      "sha256": "847e14ca7f3355debca0cea4eaa24ac0fbcdf0061da054ac89ca638a869ddba3"
+    },
+    "LTX2.5\\ltx-2.5-audio-vae-bf16.safetensors": {
+      "dir": "vae",
+      "bytes": 364866540,
+      "url": "https://huggingface.co/Lightricks/LTX-2.5/resolve/main/vae/ltx-2.5-audio-vae-bf16.safetensors",
+      "gated": true,
+      "mirror": "https://focaltek.com/owncloud/index.php/s/yvvq5cZ2dU8OxVG/download",
+      "sha256": "c52733d37f6a7fb7949c3dc0fb468c6cb2169e4d836983a73babb9f0d54837a5"
+    },
+    "LTX2.5\\gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors": {
+      "dir": "clip",
+      "bytes": 15372971786,
+      "url": "https://huggingface.co/Lightricks/LTX-2.5/resolve/main/text_encoders/gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors",
+      "gated": true,
+      "mirror": "https://focaltek.com/owncloud/index.php/s/bVo63mKnrp9rmX5/download",
+      "sha256": "09a89e084de1a149c3de60cfe9dfd3e5161967eb09eea39e806fcdeffdd568de"
+    },
+    "LTX2.5\\gemma4_e2b_it_bf16.safetensors": {
+      "dir": "clip",
+      "bytes": 10278774160,
+      "url": "https://huggingface.co/Comfy-Org/gemma-4/resolve/main/text_encoders/gemma4_e2b_it_bf16.safetensors"
+    },
+    "LTX2.5\\ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors": {
+      "dir": "latent_upscale_models",
+      "bytes": 995778752,
+      "url": "https://huggingface.co/Lightricks/LTX-2.5/resolve/main/latent_upscale_models/ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors",
+      "gated": true,
+      "mirror": "https://focaltek.com/owncloud/index.php/s/Dl6WCNmL85R33Lw/download",
+      "sha256": "eb5a71fe4068ee87ccdb1c3aa635e547ca76bd2d30ae20ae889f2c325c0677e8"
+    }
+  }
+}

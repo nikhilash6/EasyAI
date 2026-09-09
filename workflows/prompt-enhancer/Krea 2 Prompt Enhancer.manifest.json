@@ -1,0 +1,26 @@
+{
+  "version": 3,
+  "name": "Simple Image Prompt Enhancer",
+  "mode": "prompt-enhancer",
+  "engine": "krea2",
+  "bindings": {
+    "prompt": {
+      "node": "3",
+      "input": "value"
+    },
+    "enhancer": {
+      "node": "1",
+      "input": "max_length"
+    }
+  },
+  "labels": {},
+  "optional_slots": [],
+  "length_unit": "frames",
+  "fps": null,
+  "expose": [
+    "prompt"
+  ],
+  "ambiguous": [],
+  "autodetected": false,
+  "notes": ""
+}

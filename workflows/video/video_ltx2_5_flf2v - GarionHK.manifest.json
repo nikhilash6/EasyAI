@@ -1,0 +1,68 @@
+{
+  "version": 3,
+  "name": "LTX 2.5 FLF2V",
+  "mode": "video",
+  "engine": "ltx2.5",
+  "bindings": {
+    "prompt": {
+      "node": "251:252",
+      "input": "value"
+    },
+    "negative": {
+      "node": "251:217",
+      "input": "text"
+    },
+    "image_in": {
+      "node": "31",
+      "input": "image"
+    },
+    "image_in_2": {
+      "node": "39",
+      "input": "image"
+    },
+    "model": {
+      "node": "251:230",
+      "input": "unet_name"
+    },
+    "ratio": {
+      "node": "69",
+      "input": "aspect_ratio"
+    },
+    "megapixels": {
+      "node": "69",
+      "input": "megapixels"
+    },
+    "seed": {
+      "node": "251:196",
+      "input": "noise_seed"
+    },
+    "length": {
+      "node": "251:198",
+      "input": "value"
+    },
+    "enhancer": {
+      "node": "251:247",
+      "input": "max_length"
+    },
+    "output": {
+      "node": "68",
+      "input": "filename_prefix"
+    }
+  },
+  "labels": {
+    "image_in": "Load First Frame",
+    "image_in_2": "Load Last Frame"
+  },
+  "optional_slots": [],
+  "length_unit": "seconds",
+  "fps": 24,
+  "expose": [
+    "prompt",
+    "image_in",
+    "image_in_2",
+    "length"
+  ],
+  "ambiguous": [],
+  "autodetected": false,
+  "notes": ""
+}

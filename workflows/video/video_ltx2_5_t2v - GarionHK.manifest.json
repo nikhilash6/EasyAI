@@ -1,0 +1,61 @@
+{
+  "version": 3,
+  "name": "LTX 2.5 Text to Video",
+  "mode": "video",
+  "engine": "ltx2.5",
+  "bindings": {
+    "prompt": {
+      "node": "405:376",
+      "input": "value"
+    },
+    "negative": {
+      "node": "405:373",
+      "input": "text"
+    },
+    "model": {
+      "node": "405:371",
+      "input": "model_name"
+    },
+    "ratio": {
+      "node": "409",
+      "input": "aspect_ratio"
+    },
+    "megapixels": {
+      "node": "409",
+      "input": "megapixels"
+    },
+    "seed": [
+      {
+        "node": "405:338",
+        "input": "noise_seed"
+      },
+      {
+        "node": "405:339",
+        "input": "noise_seed"
+      }
+    ],
+    "length": {
+      "node": "405:362",
+      "input": "value"
+    },
+    "enhancer": {
+      "node": "405:380",
+      "input": "max_length"
+    },
+    "output": {
+      "node": "75",
+      "input": "filename_prefix"
+    }
+  },
+  "labels": {},
+  "optional_slots": [],
+  "length_unit": "seconds",
+  "fps": 24,
+  "expose": [
+    "prompt",
+    "length"
+  ],
+  "ambiguous": [],
+  "autodetected": false,
+  "notes": ""
+}

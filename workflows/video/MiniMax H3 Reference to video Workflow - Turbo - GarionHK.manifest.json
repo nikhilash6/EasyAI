@@ -1,0 +1,84 @@
+{
+  "version": 3,
+  "name": "MiniMax H3 Reference to Video",
+  "mode": "video",
+  "engine": "minimax-h3",
+  "bindings": {
+    "prompt": {
+      "node": "138",
+      "input": "value"
+    },
+    "image_in": {
+      "node": "137",
+      "input": "image"
+    },
+    "image_in_2": {
+      "node": "619",
+      "input": "image"
+    },
+    "image_in_3": {
+      "node": "620",
+      "input": "image"
+    },
+    "audio_in": {
+      "node": "621",
+      "input": "audio"
+    },
+    "video_in": {
+      "node": "623",
+      "input": "video"
+    },
+    "model": {
+      "node": "127",
+      "input": "unet_name"
+    },
+    "ratio": {
+      "node": "115",
+      "input": "aspect_ratio"
+    },
+    "megapixels": {
+      "node": "115",
+      "input": "megapixels"
+    },
+    "seed": {
+      "node": "129",
+      "input": "noise_seed"
+    },
+    "length": {
+      "node": "132",
+      "input": "value"
+    },
+    "output": {
+      "node": "92",
+      "input": "filename_prefix"
+    }
+  },
+  "labels": {
+    "image_in": "Ref image 0",
+    "image_in_2": "Ref image 1",
+    "image_in_3": "Ref image 2",
+    "audio_in": "Ref audio 0",
+    "video_in": "Load Video (Upload) 🎥🅥🅗🅢"
+  },
+  "optional_slots": [
+    "image_in",
+    "image_in_2",
+    "image_in_3",
+    "audio_in",
+    "video_in"
+  ],
+  "length_unit": "seconds",
+  "fps": 24,
+  "expose": [
+    "prompt",
+    "image_in",
+    "image_in_2",
+    "image_in_3",
+    "audio_in",
+    "video_in",
+    "length"
+  ],
+  "ambiguous": [],
+  "autodetected": false,
+  "notes": ""
+}

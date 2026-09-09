@@ -1,0 +1,42 @@
+{
+  "version": 3,
+  "name": "Krea 2 - Text to Image",
+  "mode": "image",
+  "engine": "krea2",
+  "bindings": {
+    "prompt": {
+      "node": "30:19",
+      "input": "value"
+    },
+    "model": {
+      "node": "30:10",
+      "input": "unet_name"
+    },
+    "ratio": {
+      "node": "49",
+      "input": "aspect_ratio"
+    },
+    "megapixels": {
+      "node": "49",
+      "input": "megapixels"
+    },
+    "seed": {
+      "node": "30:3",
+      "input": "seed"
+    },
+    "output": {
+      "node": "29",
+      "input": "filename_prefix"
+    }
+  },
+  "labels": {},
+  "optional_slots": [],
+  "length_unit": "frames",
+  "fps": 8,
+  "expose": [
+    "prompt"
+  ],
+  "ambiguous": [],
+  "autodetected": false,
+  "notes": ""
+}

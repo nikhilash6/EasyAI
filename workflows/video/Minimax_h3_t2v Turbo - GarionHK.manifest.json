@@ -1,0 +1,47 @@
+{
+  "version": 3,
+  "name": "MiniMax H3 Text to Video",
+  "mode": "video",
+  "engine": "minimax-h3",
+  "bindings": {
+    "prompt": {
+      "node": "105:104",
+      "input": "prompt"
+    },
+    "model": {
+      "node": "105:6",
+      "input": "unet_name"
+    },
+    "ratio": {
+      "node": "115",
+      "input": "aspect_ratio"
+    },
+    "megapixels": {
+      "node": "115",
+      "input": "megapixels"
+    },
+    "seed": {
+      "node": "105:15",
+      "input": "noise_seed"
+    },
+    "length": {
+      "node": "105:111",
+      "input": "value"
+    },
+    "output": {
+      "node": "92",
+      "input": "filename_prefix"
+    }
+  },
+  "labels": {},
+  "optional_slots": [],
+  "length_unit": "seconds",
+  "fps": 24,
+  "expose": [
+    "prompt",
+    "length"
+  ],
+  "ambiguous": [],
+  "autodetected": false,
+  "notes": ""
+}
