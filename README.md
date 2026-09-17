@@ -6,6 +6,9 @@ something without learning the node graph.
 Three tabs — **Image**, **Video** and **Prompt Helper**. Pick a style, type what
 you want, choose a shape, press Create. **Ctrl + Enter** runs the tab you are on.
 
+Software Demo Video:
+https://www.youtube.com/watch?v=lB-Q8yuMzv8
+
 ## Icon
 
 `EasyAI-Icon.png` is the master artwork. `tools/make_icons.py` turns it into the
