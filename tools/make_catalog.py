@@ -5,8 +5,10 @@
 Everything is read from this machine, so the catalogue describes a setup that
 demonstrably works rather than one assembled from guesses:
 
-* **ComfyUI's exact commit** and the custom node versions come from
-  ComfyUI-Manager's newest autosave snapshot, which already records them.
+* **ComfyUI's exact commit** and the custom node versions are read from the
+  install itself - each checkout's git commit, or a registry pack's
+  pyproject.toml version. (ComfyUI-Manager's snapshots were used before, but
+  they stop being written when Manager is not loaded and quietly go stale.)
 * **Which models and nodes each group needs** comes from EasyAI's own workflow
   files, so the catalogue tracks the workflows automatically.
 * **Download URLs** are harvested from ComfyUI's bundled workflow templates
@@ -23,6 +25,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 import re
 import sys
 from collections import defaultdict
@@ -52,21 +55,24 @@ GATED_REPOS = (
     "civitai.com/api/download/models/3147117",
 )
 
-#: The portable to install. There is no v0.33.0 release - the tags go
-#: v0.32.0 then v0.33.1 - so the base is v0.33.1 and ComfyUI's own checkout is
-#: then pinned to the commit this machine runs.
+#: The portable to install: the v0.37.0 release, the one this machine runs.
+#: Sizes and hashes are GitHub's own, so a truncated or substituted archive is
+#: refused before seven minutes of unpacking. ComfyUI's checkout is then pinned
+#: to the exact commit as well.
 PORTABLE = {
-    "release": "v0.33.1",
+    "release": "v0.37.0",
     "asset": "ComfyUI_windows_portable_nvidia.7z",
-    "url": "https://github.com/Comfy-Org/ComfyUI/releases/download/v0.33.1/"
+    "url": "https://github.com/Comfy-Org/ComfyUI/releases/download/v0.37.0/"
            "ComfyUI_windows_portable_nvidia.7z",
-    "bytes": 2133107036,
+    "bytes": 1925204508,
+    "sha256": "7805f634fab51f63a238aaf0cfe2a9833bb7c86ddfc8400a60919f44460d7d65",
     "cuda": "13.0",
     "fallback": {
         "asset": "ComfyUI_windows_portable_nvidia_cu126.7z",
-        "url": "https://github.com/Comfy-Org/ComfyUI/releases/download/v0.33.1/"
+        "url": "https://github.com/Comfy-Org/ComfyUI/releases/download/v0.37.0/"
                "ComfyUI_windows_portable_nvidia_cu126.7z",
-        "bytes": 2075064363,
+        "bytes": 1867201814,
+        "sha256": "4f8c587c8319a3595dcdc6b8fbfc7234d2d02fa6b1a328c1ab3e819c97d95fb8",
         "cuda": "12.6",
         "why": "for drivers too old for CUDA 13",
     },
@@ -91,6 +97,61 @@ FIELD_DIR = {
 
 
 # --- reading this machine --------------------------------------------------
+def _git_out(folder: Path, *args: str) -> str:
+    result = subprocess.run(["git", "-C", str(folder), *args],
+                            capture_output=True, text=True)
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+def _pyproject(folder: Path) -> dict:
+    """[project] name and version from a pack's pyproject.toml."""
+    path = folder / "pyproject.toml"
+    if not path.is_file():
+        return {}
+    try:
+        import tomllib
+        return (tomllib.loads(path.read_text(encoding="utf-8")).get("project") or {})
+    except (ValueError, OSError):
+        return {}
+
+
+def live_snapshot() -> dict:
+    """What this machine really runs, in ComfyUI-Manager's snapshot shape.
+
+    Manager's own snapshots only appear while Manager is loaded, and on
+    ComfyUI 0.37 it is not unless ComfyUI is started with --enable-manager. The
+    newest one here dates from before the update to 0.37.0, so reading it
+    paired "0.37.0" with 0.33.0's commit and add-on versions nobody had tested
+    against it. The live install is the only record that cannot go stale.
+    """
+    comfy = COMFY / "ComfyUI"
+    head = _git_out(comfy, "rev-parse", "HEAD")
+    if not head:
+        raise SystemExit(f"Could not read ComfyUI's commit from {comfy}")
+    snapshot = {"comfyui": head, "git_custom_nodes": {}, "cnr_custom_nodes": {}}
+
+    for folder in sorted((comfy / "custom_nodes").iterdir()):
+        if not folder.is_dir() or folder.name.startswith(".") or folder.name.endswith(".disabled"):
+            continue
+        if (folder / ".git").exists():
+            url = _git_out(folder, "remote", "get-url", "origin")
+            commit = _git_out(folder, "rev-parse", "HEAD")
+            if url and commit:
+                snapshot["git_custom_nodes"][url] = {"hash": commit, "disabled": False}
+            continue
+        project = _pyproject(folder)
+        if project.get("version"):
+            version = str(project["version"])
+            snapshot["cnr_custom_nodes"][folder.name] = version
+            name = str(project.get("name") or "")
+            if name and name.lower() != folder.name.lower():
+                snapshot["cnr_custom_nodes"][name] = version
+    print(f"live install : ComfyUI {head[:10]}, "
+          f"{len(snapshot['git_custom_nodes'])} git + "
+          f"{len(snapshot['cnr_custom_nodes'])} registry packs")
+    return snapshot
+
+
 def newest_snapshot() -> dict:
     snaps = sorted((COMFY / "ComfyUI/user/__manager/snapshots").glob("*.json"))
     if not snaps:
@@ -136,8 +197,12 @@ def core_classes() -> set[str]:
 def owner_of(class_names: set[str]) -> dict[str, str]:
     """class name -> the custom node folder whose source declares it."""
     owners: dict[str, str] = {}
+    # ComfyUI skips a folder named *.disabled, so it cannot own anything - and
+    # one kept as a backup, such as a fork parked beside the official pack,
+    # declares exactly the same classes.
     for folder in sorted(p for p in (COMFY / "ComfyUI/custom_nodes").iterdir()
-                         if p.is_dir() and not p.name.startswith((".", "__"))):
+                         if p.is_dir() and not p.name.startswith((".", "__"))
+                         and not p.name.endswith(".disabled")):
         blob = ""
         for py in folder.rglob("*.py"):
             try:
@@ -151,6 +216,63 @@ def owner_of(class_names: set[str]) -> dict[str, str]:
 
 
 # --- download URLs ---------------------------------------------------------
+def _template_nodes(raw: dict):
+    """Every node in a saved workflow, including those inside subgraphs.
+
+    Newer ComfyUI templates wrap their loaders in a subgraph, so the model
+    links sit under ``definitions.subgraphs[].nodes`` rather than the
+    top-level ``nodes``. Reading only the top level missed 635 links across
+    166 bundled templates - Qwen Image 2.1's three models among them.
+    """
+    stack = [raw]
+    while stack:
+        graph = stack.pop()
+        for node in graph.get("nodes") or []:
+            if isinstance(node, dict):
+                yield node
+        for sub in (graph.get("definitions") or {}).get("subgraphs") or []:
+            if isinstance(sub, dict):
+                stack.append(sub)
+
+
+#: Where an official copy of a model lives. Reading every template means the
+#: same filename turns up in several - flux2-vae.safetensors is also in an
+#: unrelated 3D project's repository - and the first one found used to win.
+_OFFICIAL = ("huggingface.co/Comfy-Org/",)
+
+
+def _offer(found: dict[str, str], name: str, url: str) -> None:
+    """Record a link, letting an official one replace an unofficial one."""
+    current = found.get(name)
+    if current is None:
+        found[name] = url
+    elif (not any(o in current for o in _OFFICIAL)
+          and any(o in url for o in _OFFICIAL)):
+        found[name] = url
+
+
+def previous_links() -> dict[str, str]:
+    """Links already in the catalogue, which were checked when they went in.
+
+    A regenerate must not swap a verified link for whichever template happens
+    to be read first. Only setup/url_overrides.json can replace one.
+    """
+    if not OUT.is_file():
+        return {}
+    try:
+        models = json.loads(OUT.read_text(encoding="utf-8")).get("models", {})
+    except (json.JSONDecodeError, OSError):
+        return {}
+    return {name: e["url"] for name, e in models.items() if e.get("url")}
+
+
+def override_links() -> dict[str, str]:
+    if not OVERRIDES.is_file():
+        return {}
+    return {Path(k).name.lower(): v
+            for k, v in json.loads(OVERRIDES.read_text(encoding="utf-8")).items() if v}
+
+
 def harvest_urls() -> dict[str, str]:
     """filename -> url, from ComfyUI's own templates and Manager's registry."""
     found: dict[str, str] = {}
@@ -169,19 +291,17 @@ def harvest_urls() -> dict[str, str]:
                 continue
             if not isinstance(raw, dict):
                 continue
-            for node in raw.get("nodes") or []:
-                if not isinstance(node, dict):
-                    continue
+            for node in _template_nodes(raw):
                 for m in (node.get("properties") or {}).get("models") or []:
                     if isinstance(m, dict) and m.get("url") and m.get("name"):
-                        found.setdefault(Path(m["name"]).name.lower(), m["url"])
+                        _offer(found, Path(m["name"]).name.lower(), m["url"])
 
     registry = COMFY / "ComfyUI/user/__manager/cache/4245046894_model-list.json"
     if registry.is_file():
         try:
             for m in json.loads(registry.read_text(encoding="utf-8")).get("models", []):
                 if m.get("url") and m.get("filename"):
-                    found.setdefault(Path(m["filename"]).name.lower(), m["url"])
+                    _offer(found, Path(m["filename"]).name.lower(), m["url"])
         except (json.JSONDecodeError, OSError):
             pass
 
@@ -354,9 +474,11 @@ def main() -> int:
     if "--mirrors-only" in sys.argv:
         return update_mirrors_only()
 
-    snapshot = newest_snapshot()
+    snapshot = live_snapshot()
     graphs = api_graphs()
     core = core_classes()
+    kept = previous_links()
+    overrides = override_links()
     urls = harvest_urls()
     print(f"url sources  : {len(urls)} filenames")
 
@@ -394,6 +516,8 @@ def main() -> int:
 
     for folder in sorted(set(owners.values())):
         low = folder.lower()
+        # Checked out from git on this machine wins over a registry entry of
+        # the same name - ComfyUI-GGUF has been both.
         if low in git_by_folder:
             url, commit = git_by_folder[low]
             nodes[folder] = {"source": "git", "url": url, "commit": commit}
@@ -414,7 +538,8 @@ def main() -> int:
         else:
             missing_file.append(name)
             guessed.append(name)
-        url = urls.get(Path(name).name.lower())
+        key = Path(name).name.lower()
+        url = overrides.get(key) or kept.get(name) or urls.get(key)
         if url:
             entry["url"] = url
             if any(repo in url for repo in GATED_REPOS):

@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
 
 from app.comfy.client import ComfyClient
 from app.comfy.launcher import ComfyLauncher
-from app import i18n
+from app import VERSION_LABEL, i18n
 from app.config import Config, ensure_folders
 from app.i18n import plural, t
 from app.jobs import EngineWorker
@@ -90,7 +90,7 @@ class MainWindow(QMainWindow):
         #: again on the way out.
         self._closing_for_good = False
 
-        self.setWindowTitle(t("EasyAI — simple AI creation"))
+        self.setWindowTitle(f"{t('EasyAI — simple AI creation')}  ·  {VERSION_LABEL}")
         self.resize(1360, 880)
         self.setMinimumSize(1040, 700)
 
@@ -245,7 +245,7 @@ class MainWindow(QMainWindow):
 
     def retranslate(self) -> None:
         """Switch the whole window to the newly chosen language, in place."""
-        self.setWindowTitle(t("EasyAI — simple AI creation"))
+        self.setWindowTitle(f"{t('EasyAI — simple AI creation')}  ·  {VERSION_LABEL}")
 
         self.menuBar().clear()
         self._build_menu()
@@ -354,7 +354,7 @@ class MainWindow(QMainWindow):
 
     def _open_settings(self) -> None:
         before = (self.cfg.get("comfyui_dir"), self.cfg.get("comfyui_launcher"),
-                  self.cfg.server, self.cfg.get("workflow_dir"))
+                  self.cfg.server, str(self.cfg.workflow_dir()))
         language_before = i18n.current()
         dialog = SettingsDialog(self.cfg, self.client, self)
         if dialog.exec() != QDialog.Accepted:
@@ -365,7 +365,7 @@ class MainWindow(QMainWindow):
 
         self.cfg.save()
         after = (self.cfg.get("comfyui_dir"), self.cfg.get("comfyui_launcher"),
-                 self.cfg.server, self.cfg.get("workflow_dir"))
+                 self.cfg.server, str(self.cfg.workflow_dir()))
         if before != after:
             self.client.server = self.cfg.server
             self.client.clear_cache()
@@ -381,10 +381,10 @@ class MainWindow(QMainWindow):
         self._reload_all()
 
     def _open_workflow_folder(self) -> None:
-        self._reveal(Path(self.cfg.get("workflow_dir")))
+        self._reveal(self.cfg.workflow_dir())
 
     def _open_output_folder(self) -> None:
-        self._reveal(Path(self.cfg.get("output_dir")))
+        self._reveal(self.cfg.output_dir())
 
     def _reveal(self, folder: Path) -> None:
         open_folder(folder)
@@ -402,19 +402,18 @@ class MainWindow(QMainWindow):
               "guesses wrong, press 'Set up…' to correct it.\n\n"
               "Tip: put a picture next to the file with the same name "
               "(flux.json → flux.png) and it becomes the thumbnail.",
-              folder=self.cfg.get("workflow_dir")))
+              folder=self.cfg.workflow_dir()))
 
     def _show_about(self) -> None:
-        from app import __version__
         QMessageBox.about(
             self, t("About EasyAI"),
-            f"<b>EasyAI {__version__}</b><br><br>"
+            f"<b>EasyAI {VERSION_LABEL}</b><br><br>"
             + t("A simple front end for ComfyUI.<br><br>"
                 "Pick a style, type what you want, choose a shape, press "
                 "Create.<br><br>"
                 "Workflows: {workflows}<br>Results: {results}",
-                workflows=self.cfg.get("workflow_dir"),
-                results=self.cfg.get("output_dir")))
+                workflows=self.cfg.workflow_dir(),
+                results=self.cfg.output_dir()))
 
     # ------------------------------------------------------------ shutdown
     def _on_queue_empty(self) -> None:

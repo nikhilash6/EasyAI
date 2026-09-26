@@ -100,22 +100,61 @@ class Capabilities:
     def model_options(self, class_type: str, field_name: str) -> list[str] | None:
         return self.enum_options(class_type, field_name)
 
+    def autogrow(self, class_type: str, group: str) -> dict | None:
+        """The members an auto-growing input group accepts, or None.
+
+        ComfyUI describes these two ways. Qwen Image 2.1 lists every name::
+
+            "images": ["COMFY_AUTOGROW_V3", {"template": {
+                "names": ["image_1", ..., "image_16"], "min": 0}}]
+
+        MiniMax H3 gives a prefix and a count instead::
+
+            "ref_images": ["COMFY_AUTOGROW_V3", {"template": {
+                "prefix": "ref_image_", "min": 0, "max": 9}}]
+
+        Both come back as ``{"names": [...], "min": n}``, the names in the
+        order the node reads them.
+        """
+        node = self.raw.get(class_type, {}).get("input", {})
+        spec = (node.get("required") or {}).get(group)
+        if spec is None:
+            spec = (node.get("optional") or {}).get(group)
+        if not (isinstance(spec, list) and len(spec) > 1
+                and spec[0] == "COMFY_AUTOGROW_V3" and isinstance(spec[1], dict)):
+            return None
+        template = spec[1].get("template") or {}
+        names = template.get("names")
+        if not names and template.get("prefix") is not None:
+            names = [f"{template['prefix']}{i}" for i in range(int(template.get("max") or 0))]
+        if not names:
+            return None
+        return {"names": [str(n) for n in names], "min": int(template.get("min") or 0)}
+
     def is_optional_input(self, class_type: str, field_name: str) -> bool:
         """Can this input simply be left out of the graph?
 
         Auto-growing groups arrive as ``ref_images.ref_image_1`` - one entry per
         attached file, under a single optional group called ``ref_images`` - so
         the part before the dot is what to look up.
+
+        A group can also sit among the *required* inputs while needing none of
+        its members: Qwen Image 2.1's ``images`` says ``min: 0``, meaning it
+        runs perfectly well with no reference picture at all. Only the first
+        ``min`` members of such a group are really required.
         """
         node = self.raw.get(class_type, {}).get("input", {})
         optional = node.get("optional") or {}
         required = node.get("required") or {}
 
-        group = field_name.split(".", 1)[0]
+        group, _, member = field_name.partition(".")
         for name in (field_name, group):
             if name in optional:
                 return True
             if name in required:
+                grow = self.autogrow(class_type, group) if member else None
+                if grow and member in grow["names"]:
+                    return grow["names"].index(member) >= grow["min"]
                 return False
         # Unknown input: assume it matters. Dropping something the node needs
         # fails the whole run, while keeping something it doesn't costs nothing.

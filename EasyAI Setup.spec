@@ -8,7 +8,7 @@ them - see build_common.py for what is left out and why.
 import sys
 
 sys.path.insert(0, SPECPATH)
-from build_common import EXCLUDES, strip_unused
+from build_common import EXCLUDES, strip_unused, version_info
 
 a = Analysis(
     ['EasyAISetup.py'],
@@ -47,4 +47,5 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon=['assets/icons/EasyAI.ico'],
+    version=version_info('EasyAI Setup', 'EasyAI Setup - installs ComfyUI for EasyAI', 'EasyAI Setup.exe'),
 )

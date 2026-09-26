@@ -22,6 +22,7 @@ from enum import Enum
 from pathlib import Path
 
 from app.modes import MODES
+from app.workflows import grow
 from app.workflows.manifest import (
     _AUDIO_LOADERS, _IMAGE_LOADERS, _VIDEO_LOADERS, BINDING_KEYS,
     FILE_SLOTS, MANIFEST_SUFFIX, MANIFEST_VERSION, Manifest, autodetect,
@@ -272,6 +273,17 @@ def _load_or_create_manifest(wf: Workflow, auto_write: bool, caps=None) -> Manif
         except (json.JSONDecodeError, OSError) as e:
             print(f"[workflows] ignoring unreadable manifest {wf.manifest_path}: {e}")
 
+    # Reference groups first, so every check below sees the finished graph.
+    # A manifest that already records the growth rebuilds it with no engine;
+    # otherwise the engine is asked what the group can take.
+    grown = list(stored.grow) if stored is not None and stored.grow else grow.plan(wf.graph, caps)
+    if grown:
+        grow.apply(wf.graph, grown)
+        if stored is not None and not stored.grow:
+            # A manifest from before this existed: the new loaders show up as
+            # unbound below, which is what merges their slots in.
+            stored.grow = grown
+
     if stored is not None:
         if stored.describes(wf.graph):
             if not stored.name:
@@ -297,6 +309,11 @@ def _load_or_create_manifest(wf: Workflow, auto_write: bool, caps=None) -> Manif
         print(f"[workflows] {wf.path.name}: manifest was out of date, detecting again")
 
     manifest = autodetect(wf.graph, mode=wf.mode, name=wf.name, caps=caps)
+    # The graph was grown above, so detection saw a group already full and had
+    # nothing left to plan. Record what was done, or the next offline load
+    # would not know to rebuild it.
+    if grown and not manifest.grow:
+        manifest.grow = grown
     if auto_write and wf.manifest_path:
         try:
             manifest.save(wf.manifest_path)

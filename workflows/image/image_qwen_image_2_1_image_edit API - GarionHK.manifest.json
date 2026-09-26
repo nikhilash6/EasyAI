@@ -1,0 +1,137 @@
+{
+  "version": 3,
+  "name": "Qwen Image 2.1 - Image Edit",
+  "mode": "image",
+  "engine": "qwen-image",
+  "bindings": {
+    "prompt": {
+      "node": "502",
+      "input": "value"
+    },
+    "negative": {
+      "node": "459:474",
+      "input": "negative_prompt"
+    },
+    "image_in": {
+      "node": "470",
+      "input": "image"
+    },
+    "image_in_2": {
+      "node": "easyai_459_474_image_2",
+      "input": "image"
+    },
+    "image_in_3": {
+      "node": "easyai_459_474_image_3",
+      "input": "image"
+    },
+    "image_in_4": {
+      "node": "easyai_459_474_image_4",
+      "input": "image"
+    },
+    "image_in_5": {
+      "node": "easyai_459_474_image_5",
+      "input": "image"
+    },
+    "image_in_6": {
+      "node": "easyai_459_474_image_6",
+      "input": "image"
+    },
+    "image_in_7": {
+      "node": "easyai_459_474_image_7",
+      "input": "image"
+    },
+    "image_in_8": {
+      "node": "easyai_459_474_image_8",
+      "input": "image"
+    },
+    "image_in_9": {
+      "node": "easyai_459_474_image_9",
+      "input": "image"
+    },
+    "image_in_10": {
+      "node": "easyai_459_474_image_10",
+      "input": "image"
+    },
+    "model": {
+      "node": "459:497",
+      "input": "unet_name"
+    },
+    "ratio": {
+      "node": "13",
+      "input": "aspect_ratio"
+    },
+    "megapixels": {
+      "node": "13",
+      "input": "megapixels"
+    },
+    "seed": {
+      "node": "459:458",
+      "input": "seed"
+    },
+    "output": {
+      "node": "461",
+      "input": "filename_prefix"
+    }
+  },
+  "labels": {
+    "image_in": "Image 1",
+    "image_in_2": "Image 2",
+    "image_in_3": "Image 3",
+    "image_in_4": "Image 4",
+    "image_in_5": "Image 5",
+    "image_in_6": "Image 6",
+    "image_in_7": "Image 7",
+    "image_in_8": "Image 8",
+    "image_in_9": "Image 9",
+    "image_in_10": "Image 10"
+  },
+  "optional_slots": [
+    "image_in",
+    "image_in_2",
+    "image_in_3",
+    "image_in_4",
+    "image_in_5",
+    "image_in_6",
+    "image_in_7",
+    "image_in_8",
+    "image_in_9",
+    "image_in_10"
+  ],
+  "length_unit": "frames",
+  "fps": 25,
+  "grow": [
+    {
+      "node": "459:474",
+      "group": "images",
+      "loader": "470",
+      "names": [
+        "image_1",
+        "image_2",
+        "image_3",
+        "image_4",
+        "image_5",
+        "image_6",
+        "image_7",
+        "image_8",
+        "image_9",
+        "image_10"
+      ]
+    }
+  ],
+  "expose": [
+    "prompt",
+    "image_in",
+    "image_in_2",
+    "image_in_3",
+    "image_in_4",
+    "image_in_5",
+    "image_in_6",
+    "image_in_7",
+    "image_in_8",
+    "image_in_9",
+    "image_in_10"
+  ],
+  "ambiguous": [],
+  "autodetected": true,
+  "notes": ""
+}

@@ -94,3 +94,38 @@ def strip_unused(binaries):
     removed = len(binaries) - len(kept)
     print(f"[build_common] left out {removed} unused Qt libraries")
     return kept
+
+
+def version_info(product: str, description: str, filename: str):
+    """What Windows shows under the .exe's Properties -> Details.
+
+    Built from app/__init__.py at build time, so the file, the window title
+    and the About box always carry the same version - there is no separate
+    version file to forget to update.
+    """
+    from PyInstaller.utils.win32.versioninfo import (
+        FixedFileInfo, StringFileInfo, StringStruct, StringTable,
+        VarFileInfo, VarStruct, VSVersionInfo,
+    )
+    from app import __version__
+
+    numbers = tuple(int(part) for part in __version__.split(".")[:3])
+    numbers = numbers + (0,) * (4 - len(numbers))
+    return VSVersionInfo(
+        ffi=FixedFileInfo(filevers=numbers, prodvers=numbers, mask=0x3F,
+                          flags=0x0, OS=0x40004, fileType=0x1, subtype=0x0,
+                          date=(0, 0)),
+        kids=[
+            StringFileInfo([StringTable("040904B0", [
+                StringStruct("CompanyName", "Garion Lab"),
+                StringStruct("FileDescription", description),
+                StringStruct("FileVersion", __version__),
+                StringStruct("InternalName", product),
+                StringStruct("LegalCopyright", "Apache License 2.0"),
+                StringStruct("OriginalFilename", filename),
+                StringStruct("ProductName", product),
+                StringStruct("ProductVersion", __version__),
+            ])]),
+            VarFileInfo([VarStruct("Translation", [1033, 1200])]),
+        ],
+    )

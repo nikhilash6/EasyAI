@@ -647,13 +647,20 @@ def _refuse_to_download(*args, **kwargs):
 
 
 def test_the_state_file_records_what_happened(tmp_path, catalog):
+    """The version recorded is the one really installed - which is not the
+    catalogue's when the user chose to leave an existing ComfyUI alone."""
+    comfy = tmp_path / "ComfyUI_windows_portable" / "ComfyUI"
+    comfy.mkdir(parents=True)
+    (comfy / "comfyui_version.py").write_text('__version__ = "0.33.0"\n', encoding="utf-8")
+
     installer = Installer(catalog, tmp_path, ["image"])
     installer.report.done.append("comfyui")
     installer.write_state()
 
     state = json.loads((tmp_path / "easyai-setup.json").read_text(encoding="utf-8"))
     assert state["groups"] == ["image"]
-    assert state["comfyui"] == catalog.comfyui["version"]
+    assert state["comfyui"] == "0.33.0"
+    assert state["tested_with"] == catalog.comfyui["version"]
     assert "comfyui" in state["installed"]
 
 

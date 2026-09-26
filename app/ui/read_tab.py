@@ -134,7 +134,7 @@ class ReadTab(QWidget):
         from app.workflows.loader import scan_all
 
         try:
-            groups = scan_all(self.cfg.get("workflow_dir"),
+            groups = scan_all(self.cfg.workflow_dir(),
                               auto_write_manifest=False)
         except Exception as e:      # a bad workflow folder must not break this
             print(f"[read] could not load the workflows: {e}")

@@ -190,7 +190,10 @@ def prune_unused_files(graph: dict, manifest: Manifest, request: GenerationReque
     input has to leave the graph entirely, which the node allows because these
     reference groups are declared optional.
     """
-    touched_groups: set[tuple[str, str]] = set()
+    # Where each touched group starts counting, read before anything is
+    # removed - MiniMax numbers from ref_image_0, Qwen Image 2.1 from image_1,
+    # and after the first member goes there is no telling which it was.
+    touched_groups: dict[tuple[str, str], int] = {}
 
     for key in manifest.file_slots():
         if request.files.get(key) or not manifest.is_optional(key):
@@ -201,42 +204,60 @@ def prune_unused_files(graph: dict, manifest: Manifest, request: GenerationReque
                 consumer = graph.get(consumer_id)
                 if not isinstance(consumer, dict):
                     continue
-                if (consumer.get("inputs") or {}).pop(input_name, None) is not None:
-                    if "." in input_name:
-                        touched_groups.add((consumer_id, input_name.split(".", 1)[0]))
+                inputs = consumer.get("inputs") or {}
+                if "." in input_name:
+                    group = input_name.split(".", 1)[0]
+                    touched_groups.setdefault(
+                        (consumer_id, group), _first_index(inputs, group))
+                inputs.pop(input_name, None)
 
             # Drop the loader too, once nothing reads from it, so ComfyUI does
             # not try to open a file that is not there.
             if not loader_consumers(graph, binding.node):
                 graph.pop(binding.node, None)
 
-        report.skipped.append(f"{key}: not supplied, removed from the workflow")
+        # Recorded as done, not skipped: skipped items are shown to the user
+        # as warnings, and leaving an optional picture empty is a choice the
+        # run honoured. With ten reference slots it used to put eight or nine
+        # warning lines under every single Qwen Image 2.1 result.
+        report.applied.append(f"{key}:left out")
 
-    for consumer_id, group in sorted(touched_groups):
-        _renumber_group(graph, consumer_id, group)
+    for (consumer_id, group), first in sorted(touched_groups.items()):
+        _renumber_group(graph, consumer_id, group, first)
 
 
-def _renumber_group(graph: dict, consumer_id: str, group: str) -> None:
+def _member_index(name: str) -> int:
+    digits = re.findall(r"\d+", name.rsplit(".", 1)[-1])
+    return int(digits[-1]) if digits else 0
+
+
+def _first_index(inputs: dict, group: str) -> int:
+    """The number a group's first member carries - 0 or 1 in practice."""
+    indices = [_member_index(k) for k in inputs if k.startswith(f"{group}.")]
+    return min(indices) if indices else 0
+
+
+def _renumber_group(graph: dict, consumer_id: str, group: str, first: int = 0) -> None:
     """Close the gaps in an auto-growing input group.
 
     These groups are numbered from a prefix - ref_image_0, ref_image_1 - and
     removing the middle one leaves a hole. ComfyUI accepts the hole, but the
     node reads the group by index, so renumbering keeps the remaining files in
     the positions the node expects rather than relying on that.
+
+    ``first`` is where the group counted from before anything was removed. It
+    has to be kept: renumbering Qwen Image 2.1's image_1 as image_0 gives it a
+    name its node does not have, and the run fails.
     """
     inputs = (graph.get(consumer_id) or {}).get("inputs") or {}
     members = [k for k in inputs if k.startswith(f"{group}.")]
     if not members:
         return
 
-    def index_of(name: str) -> int:
-        digits = re.findall(r"\d+", name.rsplit(".", 1)[-1])
-        return int(digits[-1]) if digits else 0
-
-    members.sort(key=index_of)
+    members.sort(key=_member_index)
     values = [inputs.pop(name) for name in members]
     stem = re.sub(r"\d+$", "", members[0].split(".", 1)[1])
-    for position, value in enumerate(values):
+    for position, value in enumerate(values, first):
         inputs[f"{group}.{stem}{position}"] = value
 
 

@@ -35,8 +35,10 @@ DEFAULTS = {
     "close_when_queue_empty": False,
 
     # --- Folders ---
-    "workflow_dir": str(ROOT / "workflows"),
-    "output_dir": str(ROOT / "output"),
+    #: Relative to EasyAI's own folder, so a copied or moved EasyAI keeps
+    #: using the folders beside it. A full path chosen in Settings is kept.
+    "workflow_dir": "workflows",
+    "output_dir": "output",
 
     # --- Generation defaults ---
     "default_ratio": "2:3",
@@ -76,6 +78,9 @@ DEFAULTS = {
 
 SETTINGS_PATH = ROOT / "settings.json"
 
+#: Folder settings that default to a folder beside EasyAI.
+FOLDER_KEYS = ("workflow_dir", "output_dir")
+
 #: Settings that are always back to their default at the next start, however
 #: they were left.
 #:
@@ -112,6 +117,39 @@ class Config:
         for key in SESSION_ONLY:
             self.data[key] = DEFAULTS[key]
 
+        self._repair_moved_folders()
+
+    def _repair_moved_folders(self) -> None:
+        """Undo full paths left behind by a copy of EasyAI that has since moved.
+
+        Older versions saved these folders as full paths. Move the EasyAI
+        folder - from Desktop\\download to another drive, say - and it went on
+        saving every result into the old folder's output\\image, where nobody
+        looks. A path that is plainly another EasyAI folder's own "output" or
+        "workflows" is put back to the one beside this EasyAI. Anything else
+        was chosen in Settings, and is kept exactly.
+        """
+        for key in FOLDER_KEYS:
+            value = str(self.data.get(key) or "")
+            path = Path(value)
+            if not value or not path.is_absolute():
+                continue
+            default = DEFAULTS[key]
+            if path == ROOT / default:
+                self.data[key] = default
+                continue
+            parent = path.parent
+            # Moving EasyAI takes EasyAI.exe with it, leaving only the output
+            # folder it kept re-creating - so the folder's name counts too.
+            is_another_easyai = (not parent.exists()
+                                 or parent.name.lower().startswith("easyai")
+                                 or (parent / "EasyAI.exe").is_file()
+                                 or (parent / "EasyAI.py").is_file())
+            if path.name.lower() == default and parent != ROOT and is_another_easyai:
+                print(f"[config] {key} pointed at another EasyAI folder ({value}) - "
+                      f"using the one beside this EasyAI")
+                self.data[key] = default
+
     def save(self) -> None:
         tmp = self.path.with_suffix(".json.tmp")
         try:
@@ -144,12 +182,26 @@ class Config:
     def base_url(self) -> str:
         return f"http://{self.server}"
 
+    def folder(self, key: str) -> Path:
+        """A folder setting as a real path: relative ones sit beside EasyAI."""
+        path = Path(str(self.get(key) or DEFAULTS[key]))
+        return path if path.is_absolute() else ROOT / path
+
+    def set_folder(self, key: str, value: str | Path) -> None:
+        """Store a folder, keeping it relative when it is inside EasyAI's own
+        folder - so the whole folder can still be moved."""
+        path = Path(value)
+        try:
+            self.set(key, str(path.relative_to(ROOT)) if path.is_absolute() else str(path))
+        except ValueError:
+            self.set(key, str(path))
+
     def workflow_dir(self, mode: str | None = None) -> Path:
-        d = Path(self.get("workflow_dir"))
+        d = self.folder("workflow_dir")
         return d / mode if mode else d
 
     def output_dir(self, mode: str | None = None) -> Path:
-        d = Path(self.get("output_dir"))
+        d = self.folder("output_dir")
         return d / mode if mode else d
 
     def comfyui_launcher_path(self) -> Path:

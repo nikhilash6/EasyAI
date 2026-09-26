@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
     QButtonGroup, QCheckBox, QComboBox, QDoubleSpinBox, QFileDialog, QFrame,
     QHBoxLayout,
     QLabel, QLayout, QListWidget, QListWidgetItem, QMenu, QPushButton,
-    QSizePolicy, QSlider, QSpinBox, QVBoxLayout, QWidget,
+    QScrollArea, QSizePolicy, QSlider, QSpinBox, QVBoxLayout, QWidget,
 )
 
 from app.i18n import t
@@ -552,6 +552,32 @@ class MegapixelPicker(QWidget):
     def retranslate(self) -> None:
         self.heading.setText(t("DETAIL"))
         self._refresh()
+
+
+class ColumnScroll(QScrollArea):
+    """Scrolls up and down only, and is never narrower than what it holds.
+
+    A plain scroll area reports almost no minimum width, so a splitter squeezes
+    it and the right-hand edge of its contents - buttons, borders - is cut off
+    with no way to scroll to it. Reporting the contents' own minimum width
+    keeps the column as wide as it was before it scrolled.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWidgetResizable(True)
+        self.setFrameShape(QFrame.NoFrame)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+    def minimumSizeHint(self) -> QSize:
+        hint = super().minimumSizeHint()
+        inner = self.widget()
+        if inner is None:
+            return hint
+        width = (inner.minimumSizeHint().width()
+                 + self.verticalScrollBar().sizeHint().width()
+                 + 2 * self.frameWidth())
+        return QSize(max(width, hint.width()), hint.height())
 
 
 class Switch(QCheckBox):

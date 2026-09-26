@@ -27,7 +27,7 @@ from app.comfy.objectinfo import Capabilities, FolderMap
 from app.modes import MODE_ORDER, MODES
 from app.paths import PROJECT_ROOT
 from app.workflows.loader import Format, classify
-from app.workflows.manifest import autodetect
+from app.workflows.manifest import BINDING_KEYS, autodetect
 
 CATALOG = PROJECT_ROOT / "setup" / "catalog.json"
 OVERRIDES = PROJECT_ROOT / "setup" / "url_overrides.json"
@@ -191,7 +191,9 @@ def analyse(path: Path, group: str, client, caps: Capabilities,
     # What EasyAI will be able to drive. A workflow with no prompt is almost
     # certainly the wrong file.
     manifest = autodetect(graph, group, result.name, caps)
-    result.manifest_slots = sorted(manifest.bindings)
+    # Only what was actually found - listing every key EasyAI knows made a
+    # workflow with no prompt look as if it could drive audio and video too.
+    result.manifest_slots = [k for k in BINDING_KEYS if manifest.has(k)]
     if not manifest.has("prompt"):
         result.warnings.append(
             "No prompt input was found, so the typing box will do nothing.")

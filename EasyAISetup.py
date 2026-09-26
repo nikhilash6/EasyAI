@@ -72,7 +72,9 @@ def main() -> int:
               path=CATALOG_PATH))
         return 1
 
-    window = SetupWindow(Catalog())
+    from setup.ui import open_install_list
+    catalog, loaded = open_install_list()
+    window = SetupWindow(catalog, loaded)
     window.show()
     return app.exec()
 

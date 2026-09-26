@@ -37,6 +37,10 @@ EasyAI - V*.zip
 # at folders that do not exist for them.
 settings.json
 easyai-setup.json
+# EasyAI Setup's editable install list, written beside Setup on first run.
+# The real list is setup/catalog.json; this is a per-machine copy of it.
+setup-settings.json
+setup-settings.old.json
 
 # Everything made with EasyAI: pictures, videos and enhanced prompts. Large,
 # personal, and none of it is source.

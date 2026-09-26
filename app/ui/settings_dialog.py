@@ -109,10 +109,10 @@ class SettingsDialog(QDialog):
         # --- folders -----------------------------------------------------
         folder_box = QGroupBox(t("Folders"))
         folder_form = QFormLayout(folder_box)
-        self.workflow_row = PathRow(str(self.cfg.get("workflow_dir")),
+        self.workflow_row = PathRow(str(self.cfg.workflow_dir()),
                                     t("Where are the workflow files?"))
         folder_form.addRow(t("Workflows"), self.workflow_row)
-        self.output_row = PathRow(str(self.cfg.get("output_dir")),
+        self.output_row = PathRow(str(self.cfg.output_dir()),
                                   t("Where should results be saved?"))
         folder_form.addRow(t("Results"), self.output_row)
         outer.addWidget(folder_box)
@@ -221,8 +221,8 @@ class SettingsDialog(QDialog):
         self.cfg.set("comfyui_server", self.server_edit.text().strip() or "127.0.0.1:8188")
         self.cfg.set("auto_launch", self.auto_launch.isChecked())
         self.cfg.set("stop_engine_on_exit", self.stop_on_exit.isChecked())
-        self.cfg.set("workflow_dir", self.workflow_row.value())
-        self.cfg.set("output_dir", self.output_row.value())
+        self.cfg.set_folder("workflow_dir", self.workflow_row.value())
+        self.cfg.set_folder("output_dir", self.output_row.value())
         self.cfg.set("default_ratio", self.ratio_combo.currentText())
         self.cfg.set("job_timeout", self.timeout_spin.value())
         self.cfg.set("launch_timeout", self.launch_timeout_spin.value())

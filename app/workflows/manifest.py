@@ -21,6 +21,7 @@ graph, so any list-valued input is invisible to detection.
 """
 from __future__ import annotations
 
+import copy
 import json
 import os
 import re
@@ -177,6 +178,10 @@ class Manifest:
     length_unit: str = "seconds"
     #: Frame rate, so seconds can be shown as frames and back.
     fps: int | None = None
+    #: Reference-picture groups EasyAI filled out to the node's real capacity,
+    #: as written by app.workflows.grow.plan. Kept so the same slots exist when
+    #: the workflow loads with ComfyUI closed.
+    grow: list[dict] = field(default_factory=list)
     expose: list[str] = field(default_factory=list)
     ambiguous: list[str] = field(default_factory=list)
     autodetected: bool = True
@@ -232,6 +237,23 @@ class Manifest:
         """May this slot be left empty?"""
         return key in (self.optional_slots or [])
 
+    def grown_slot_groups(self, graph: dict) -> list[list[str]]:
+        """The file slots of each grown reference group, in the node's order.
+
+        The UI shows these one at a time - the next appears once the one
+        before it is filled - because the node numbers pictures by position.
+        A gap would silently turn the third picture into ``<image 2>``.
+        """
+        from app.workflows import grow as _grow
+
+        by_node = {b.node: key for key in self.file_slots() for b in self.all(key)}
+        groups = []
+        for spec in self.grow or []:
+            keys = [by_node[n] for n in _grow.member_loaders(graph, spec) if n in by_node]
+            if len(keys) > 1:
+                groups.append(keys)
+        return groups
+
     @property
     def has_optional_files(self) -> bool:
         return any(self.is_optional(k) for k in self.file_slots())
@@ -272,6 +294,7 @@ class Manifest:
             "optional_slots": list(self.optional_slots or []),
             "length_unit": self.length_unit,
             "fps": self.fps,
+            "grow": [dict(g) for g in (self.grow or [])],
             "expose": list(self.expose),
             "ambiguous": list(self.ambiguous),
             "autodetected": self.autodetected,
@@ -290,6 +313,7 @@ class Manifest:
             optional_slots=[str(x) for x in (raw.get("optional_slots") or [])],
             length_unit=str(raw.get("length_unit") or "seconds"),
             fps=int(raw["fps"]) if raw.get("fps") else None,
+            grow=[dict(g) for g in (raw.get("grow") or []) if isinstance(g, dict)],
             expose=[str(x) for x in (raw.get("expose") or [])],
             ambiguous=[str(x) for x in (raw.get("ambiguous") or [])],
             autodetected=bool(raw.get("autodetected", True)),
@@ -389,6 +413,11 @@ def _consumer_edges(graph: dict) -> dict[str, list[tuple[str, str]]]:
     return edges
 
 
+#: Role of a node feeding both of a sampler's conditionings. Internal only;
+#: _role_map never returns it.
+_BOTH = "both"
+
+
 def _role_map(graph: dict) -> dict[str, str]:
     """Work out which nodes are the positive prompt and which are the negative.
 
@@ -402,12 +431,19 @@ def _role_map(graph: dict) -> dict[str, str]:
     roles: dict[str, str] = {}
 
     for src, consumers in edges.items():
-        for _, input_name in consumers:
-            if "negative" in input_name:
-                roles[src] = "negative"      # negative wins outright
-                break
-            if "positive" in input_name:
-                roles.setdefault(src, "positive")
+        names = [input_name for _, input_name in consumers]
+        feeds_negative = any("negative" in n for n in names)
+        feeds_positive = any("positive" in n for n in names)
+        if feeds_negative and feeds_positive:
+            # One encoder producing both conditionings - Qwen Image 2.1's
+            # TextEncodeQwenImage21 takes `prompt` and `negative_prompt` and
+            # feeds the sampler's positive AND negative. It has no single role,
+            # so what feeds it is judged by which of its inputs it reaches.
+            roles[src] = _BOTH
+        elif feeds_negative:
+            roles[src] = "negative"
+        elif feeds_positive:
+            roles[src] = "positive"
 
     # Walk upstream: a node inherits the role of what it feeds, as long as
     # everything it feeds agrees. Graphs are shallow here, so a few passes do.
@@ -416,14 +452,19 @@ def _role_map(graph: dict) -> dict[str, str]:
         for src, consumers in edges.items():
             if src in roles:
                 continue
-            downstream = {roles.get(dst) for dst, _ in consumers}
+            downstream = set()
+            for dst, input_name in consumers:
+                role = roles.get(dst)
+                if role == _BOTH:
+                    role = "negative" if "negative" in input_name else "positive"
+                downstream.add(role)
             downstream.discard(None)
             if len(downstream) == 1:
                 roles[src] = downstream.pop()
                 changed = True
         if not changed:
             break
-    return roles
+    return {node: role for node, role in roles.items() if role != _BOTH}
 
 
 def _find_text_fields(graph: dict) -> tuple[list[tuple[str, str, dict]], list[tuple[str, str, dict]]]:
@@ -936,6 +977,15 @@ def autodetect(graph: dict, mode: str = "image", name: str = "", caps=None) -> M
     Everything with more than one plausible candidate is listed in
     ``ambiguous`` so the UI can nudge the user to check it in the editor.
     """
+    # Fill any single-picture reference group out to what its node can take,
+    # on a copy - the caller's graph is theirs.
+    from app.workflows import grow as _grow
+
+    grown = _grow.plan(graph, caps)
+    if grown:
+        graph = copy.deepcopy(graph)
+        _grow.apply(graph, grown)
+
     graph_order = [nid for nid, _ in _iter_nodes(graph)]
     bindings: dict[str, list[Binding]] = {k: [] for k in BINDING_KEYS}
     ambiguous: list[str] = []
@@ -1003,12 +1053,20 @@ def autodetect(graph: dict, mode: str = "image", name: str = "", caps=None) -> M
     if bindings.get("length") and mode == "video":
         expose.append("length")
 
+    # The pictures of a grown group are numbered the way the node reads them.
+    by_node = {b.node: key for key in FILE_SLOTS for b in bindings.get(key, [])}
+    for spec in grown:
+        for position, loader in enumerate(_grow.member_loaders(graph, spec), 1):
+            if loader in by_node:
+                labels[by_node[loader]] = f"Reference {position}"
+
     return Manifest(
         name=name,
         mode=mode,
         engine=guess_engine(graph),
         bindings=bindings,
         labels=labels,
+        grow=grown,
         optional_slots=_find_optional_slots(graph, bindings, caps),
         length_unit=unit,
         fps=_find_fps(graph),

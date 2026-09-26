@@ -15,13 +15,16 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
 from app.i18n import t
+from setup import existing
 from setup.catalog import Catalog, Model, NodePack, human_bytes, token_host_for
 from setup.download import Cancelled, DownloadError, download, free_space
 
@@ -41,6 +44,60 @@ _7ZIP_CANDIDATES = (
 
 _NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
 
+#: Moves a checkout to one exact commit. Run with the portable's own Python,
+#: which carries pygit2 for ComfyUI's updater - so it works on a viewer's
+#: machine with no git installed.
+#:
+#: It differs from ComfyUI's own updater in the two ways that matter here: it
+#: goes to the pinned commit, never to "latest", and it checks out *safely*.
+#: The official updater forces its way over local changes, and a forced
+#: checkout can swap a models folder that the user has linked elsewhere for a
+#: real, empty one - every model then looks missing. A safe checkout touches
+#: only the files that differ between the two versions, and refuses rather
+#: than overwrite anything the user changed. The current state is kept as a
+#: branch first, so the move can always be undone.
+_SWITCH = r"""
+import datetime, sys
+import pygit2
+repo_path, commit, tag = sys.argv[1], sys.argv[2], sys.argv[3]
+pygit2.option(pygit2.GIT_OPT_SET_OWNER_VALIDATION, 0)
+repo = pygit2.Repository(repo_path)
+
+def have(oid):
+    try:
+        return repo.get(oid) is not None
+    except (KeyError, ValueError, pygit2.GitError):
+        return False
+
+try:
+    stamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    repo.branches.local.create("easyai-before-" + stamp, repo.head.peel(pygit2.Commit))
+except Exception:
+    pass
+
+if not have(commit):
+    origin = repo.remotes["origin"]
+    if tag:
+        try:
+            origin.fetch(["+refs/tags/%s:refs/tags/%s" % (tag, tag)])
+        except pygit2.GitError:
+            pass
+    if not have(commit):
+        origin.fetch()
+if not have(commit):
+    print("EASYAI-FAIL the pinned commit could not be fetched")
+    sys.exit(2)
+
+target = repo.get(commit)
+try:
+    repo.checkout_tree(target, strategy=pygit2.GIT_CHECKOUT_SAFE)
+except pygit2.GitError as e:
+    print("EASYAI-FAIL " + str(e))
+    sys.exit(3)
+repo.set_head(target.id)
+print("EASYAI-OK " + str(repo.head.target))
+"""
+
 
 @dataclass
 class Report:
@@ -57,10 +114,20 @@ class Installer:
                  hf_token: str = "", civitai_token: str = "",
                  on_step: Callable[[str], None] | None = None,
                  on_progress: Callable | None = None,
-                 should_stop: Callable[[], bool] | None = None):
+                 should_stop: Callable[[], bool] | None = None,
+                 update_existing: bool = False, download_models: bool = True):
         self.catalog = catalog
         self.target = Path(target)
         self.groups = groups
+        #: Move a ComfyUI that is already here, and EasyAI's add-ons in it, to
+        #: the versions the catalogue pins. Off unless asked for: someone's
+        #: working ComfyUI is theirs, and changing its version is their call.
+        self.update_existing = update_existing
+        #: Fetch the models ComfyUI cannot already see. Off means ComfyUI and
+        #: the add-ons only.
+        self.download_models = download_models
+        #: Set when this run unpacked a new ComfyUI - that one is ours to pin.
+        self._fresh = False
         #: Kept in memory for the run only - never written to disk, because a
         #: token in a config file outlives the reason it was needed.
         self.tokens = {"HuggingFace": hf_token, "Civitai": civitai_token}
@@ -108,7 +175,8 @@ class Installer:
 
     # -- 1. room to work ---------------------------------------------------
     def check_space(self) -> None:
-        needed = self.catalog.download_bytes(self.groups)
+        needed = existing.survey(self.catalog, self.target, self.groups) \
+            .download_bytes(self.download_models)
         # The portable expands to about three times its archive, and models are
         # written once, so headroom of the download plus a margin is enough.
         needed = int(needed * 1.15)
@@ -125,7 +193,7 @@ class Installer:
     # -- 2. ComfyUI portable ----------------------------------------------
     def install_comfyui(self) -> None:
         if (self.python).is_file():
-            self._say(t("ComfyUI is already here - leaving it alone"))
+            self._say(t("ComfyUI is already here - not downloading it again"))
             self.report.skipped.append("comfyui")
             return
 
@@ -135,6 +203,7 @@ class Installer:
                     version=self.catalog.comfyui["version"],
                     size=human_bytes(spec["bytes"])))
         download(spec["url"], archive, expected_bytes=spec.get("bytes", 0),
+                 sha256=spec.get("sha256", ""),
                  on_progress=self._progress, should_stop=self._stop)
 
         self._say(t("Unpacking ComfyUI - this takes a few minutes"))
@@ -144,29 +213,70 @@ class Installer:
                 "Unpacked, but {path} is missing - the archive may not be the "
                 "Windows portable build.", path=self.python))
         archive.unlink(missing_ok=True)
+        self._fresh = True
         self.report.done.append("comfyui")
 
-    # -- 3. pin the core --------------------------------------------------
+    # -- 3. the pinned ComfyUI ---------------------------------------------
     def pin_comfyui_commit(self) -> None:
-        """Move ComfyUI onto the exact commit this catalogue was built from.
+        """Put ComfyUI on the exact commit the catalogue was built from.
 
-        The portable ships whatever the release tag was - there is no v0.33.0
-        release, only v0.33.1 - so the core is checked out to the recorded
-        commit to remove that difference.
+        A ComfyUI this run unpacked is always pinned - it is ours. One that was
+        already here is moved only if the user asked, and then its Python
+        packages are brought up to match, as ComfyUI's own updater does: new
+        code on the old front-end package does not start properly.
         """
-        commit = self.catalog.comfyui.get("commit")
-        if not commit or not (self.comfy / ".git").is_dir():
-            self._say(t("Skipping version pin (no git checkout in this build)"))
+        commit = str(self.catalog.comfyui.get("commit") or "")
+        version = str(self.catalog.comfyui.get("version") or "")
+        if not commit:
             self.report.skipped.append("pin")
             return
-        if self._git(self.comfy, "rev-parse", "HEAD").strip().startswith(commit[:12]):
-            self._say(t("ComfyUI already pinned to {commit}", commit=commit[:10]))
+        current = existing.git_head(self.comfy) or ""
+        if current.startswith(commit[:12]):
+            self._say(t("ComfyUI is already {version}", version=version))
             self.report.skipped.append("pin")
             return
-        self._say(t("Pinning ComfyUI to {commit}", commit=commit[:10]))
-        self._git(self.comfy, "fetch", "--depth", "50", "origin", commit, check=False)
-        self._git(self.comfy, "checkout", commit)
+        if not self._fresh and not self.update_existing:
+            self._say(t(
+                "ComfyUI {installed} is here - leaving it as it is. EasyAI is "
+                "tested with {version}.",
+                installed=existing.comfyui_version(self.comfy) or "?", version=version))
+            self.report.skipped.append("pin")
+            return
+        if not (self.comfy / ".git").exists():
+            raise OSError(t(
+                "This ComfyUI was not installed from a git checkout, so it cannot "
+                "be moved to {version}. Install into a new folder instead.",
+                version=version))
+
+        self._say(t("Moving ComfyUI to {version}", version=version))
+        self._switch_repo(self.comfy, commit, tag=str(
+            (self.catalog.comfyui.get("portable") or {}).get("release") or ""))
+        self._pip_requirements(self.comfy, remember=self.portable / "update"
+                               / "current_requirements.txt")
         self.report.done.append("pin")
+
+    def _switch_repo(self, repo: Path, commit: str, tag: str = "") -> None:
+        """Move one checkout to one commit, safely. See _SWITCH."""
+        if self.python.is_file():
+            result = subprocess.run(
+                [str(self.python), "-s", "-c", _SWITCH, str(repo), commit, tag],
+                capture_output=True, text=True, timeout=1800,
+                creationflags=_NO_WINDOW)
+            out = result.stdout or ""
+            if "EASYAI-OK" in out:
+                return
+            failure = next((line[len("EASYAI-FAIL"):].strip()
+                            for line in out.splitlines() if line.startswith("EASYAI-FAIL")), "")
+            if failure:
+                raise OSError(t(
+                    "Could not move {folder} to the tested version: {problem}\n\n"
+                    "If you changed files in it yourself, undo those changes and "
+                    "run Setup again.", folder=repo.name, problem=failure))
+            # No pygit2 in this Python: fall through to git itself.
+        if tag:
+            self._git(repo, "fetch", "origin", f"refs/tags/{tag}:refs/tags/{tag}", check=False)
+        self._git(repo, "fetch", "origin", check=False)
+        self._git(repo, "checkout", "-q", commit)
 
     # -- 4. custom nodes ---------------------------------------------------
     def install_nodes(self) -> None:
@@ -182,8 +292,20 @@ class Installer:
                 raise Cancelled("nodes")
             destination = folder / pack.name
             if destination.is_dir():
-                self._say("  " + t("{name} already installed", name=pack.name))
-                self.report.skipped.append(pack.name)
+                state = existing.pack_state(destination)
+                if existing.pack_matches(pack, state) or not self.update_existing:
+                    self._say("  " + t("{name} already installed", name=pack.name))
+                    self.report.skipped.append(pack.name)
+                    continue
+                self._say("  " + t("updating {name} to the tested version", name=pack.name))
+                try:
+                    self._update_pack(pack, destination, state)
+                    self._pip_requirements(destination)
+                    self.report.done.append(pack.name)
+                except (subprocess.SubprocessError, OSError, DownloadError) as e:
+                    self._say("  !! " + t("{name} failed: {problem}",
+                                          name=pack.name, problem=e))
+                    self.report.failed.append(f"{pack.name}: {e}")
                 continue
             self._say("  " + t("installing {name}", name=pack.name))
             try:
@@ -195,6 +317,34 @@ class Installer:
                 self._say("  !! " + t("{name} failed: {problem}",
                                       name=pack.name, problem=e))
                 self.report.failed.append(f"{pack.name}: {e}")
+
+    def _update_pack(self, pack: NodePack, destination: Path,
+                     state: existing.PackState) -> None:
+        """Bring an installed add-on to its pinned version.
+
+        A git checkout of the same pack is moved in place. Anything else - a
+        registry pack at another version, or one that has switched between
+        registry and git - is replaced, with the old copy put back if the new
+        one cannot be installed.
+        """
+        if pack.source == "git" and state.source == "git" and pack.commit:
+            try:
+                self._switch_repo(destination, pack.commit)
+                return
+            except (OSError, subprocess.SubprocessError):
+                pass            # a fork, or history it cannot reach: replace it
+
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        # ".disabled" so ComfyUI skips it while it sits beside the new copy.
+        aside = destination.with_name(f"{destination.name}.easyai-{stamp}.disabled")
+        destination.rename(aside)
+        try:
+            self._install_pack(pack, destination)
+        except BaseException:
+            remove_tree(destination)
+            aside.rename(destination)
+            raise
+        remove_tree(aside)
 
     def _install_pack(self, pack: NodePack, destination: Path) -> None:
         if pack.source == "git" and pack.url:
@@ -229,40 +379,75 @@ class Installer:
         hoping the commit is in it can. If the host refuses SHA fetches, fall
         back to a full clone.
         """
-        destination.mkdir(parents=True, exist_ok=True)
+        # Twice, because a dropped connection mid-fetch is common and a second
+        # try usually just works - before this, one hiccup left the add-on
+        # uninstalled with nothing but a misleading "already exists" to show.
+        first_problem = ""
+        for _attempt in range(2):
+            remove_tree(destination)
+            destination.mkdir(parents=True, exist_ok=True)
+            try:
+                self._git(destination, "init", "-q")
+                self._git(destination, "remote", "add", "origin", pack.url)
+                self._git(destination, "fetch", "--depth", "1", "origin", pack.commit)
+                self._git(destination, "checkout", "-q", "FETCH_HEAD")
+                return
+            except subprocess.SubprocessError as e:
+                first_problem = first_problem or str(e)
+
+        # Some hosts will not hand out a commit by its hash; a full clone
+        # reaches it through the branch history instead.
+        remove_tree(destination)
         try:
-            self._git(destination, "init", "-q")
-            self._git(destination, "remote", "add", "origin", pack.url)
-            self._git(destination, "fetch", "--depth", "1", "origin", pack.commit)
-            self._git(destination, "checkout", "-q", "FETCH_HEAD")
-        except subprocess.SubprocessError:
-            shutil.rmtree(destination, ignore_errors=True)
             self._git(destination.parent, "clone", pack.url, pack.name)
             self._git(destination, "checkout", pack.commit)
+        except subprocess.SubprocessError as e:
+            raise subprocess.SubprocessError(f"{e} (first try: {first_problem})") from e
 
-    def _pip_requirements(self, folder: Path) -> None:
+    def _pip_requirements(self, folder: Path, remember: Path | None = None) -> None:
         req = folder / "requirements.txt"
         if not req.is_file() or not self.python.is_file():
             return
         self._say("    " + t("installing its Python packages"))
-        subprocess.run([str(self.python), "-m", "pip", "install", "-r", str(req)],
-                       capture_output=True, timeout=1800, creationflags=_NO_WINDOW)
+        result = subprocess.run(
+            [str(self.python), "-s", "-m", "pip", "install", "-r", str(req)],
+            capture_output=True, timeout=1800, creationflags=_NO_WINDOW)
+        if remember is not None and result.returncode == 0:
+            # Where ComfyUI's own updater records what it last installed, so
+            # it does not reinstall the same packages next time it runs.
+            try:
+                remember.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(req, remember)
+            except OSError:
+                pass
 
     # -- 5. models ---------------------------------------------------------
     def install_models(self) -> None:
+        if not self.download_models:
+            self._say(t("Not downloading any models, as chosen"))
+            self.report.skipped.append("models")
+            return
+
         models = self.catalog.models_for(self.groups)
         usable = [m for m in models if m.installable]
         blocked = [m for m in models if not m.installable]
-        total = sum(m.bytes for m in usable)
+        # Everywhere ComfyUI looks, not just where Setup would put a file: a
+        # text encoder in models/clip is found by ComfyUI just as well as one
+        # in models/text_encoders, and must not be downloaded again.
+        search = existing.model_search_paths(self.portable)
+        present = {m.name: existing.find_model(m, self.models_dir, search)
+                   or self._already_at_destination(m) for m in models}
+        todo = [m for m in usable if not present[m.name]]
         self._say(t("{n} models to fetch, {size}",
-                    n=len(usable), size=human_bytes(total)))
+                    n=len(todo), size=human_bytes(sum(m.bytes for m in todo))))
 
         for i, model in enumerate(usable, 1):
             if self._stop():
                 raise Cancelled("models")
-            destination = self.models_dir / model.relative_path
-            if destination.is_file() and (not model.bytes
-                                          or destination.stat().st_size == model.bytes):
+            destination = self.catalog.model_destination(model, self.models_dir, self.target)
+            found = present[model.name]
+            if found and not (found == destination and model.bytes
+                              and found.stat().st_size != model.bytes):
                 self._say(f"  [{i}/{len(usable)}] "
                           + t("{name} already here", name=model.filename))
                 self.report.skipped.append(model.filename)
@@ -282,11 +467,71 @@ class Installer:
                 self.report.failed.append(f"{model.filename}: {_first_line(e)}")
 
         for model in blocked:
+            if present.get(model.name):
+                continue
             self._say("  !! " + t("no download link for {name} - copy it in by hand",
                                   name=model.name))
             self.report.failed.append(f"no link: {model.name}")
 
+        self.register_model_folders(models)
         self.write_licences()
+
+    def _already_at_destination(self, model: Model) -> Path | None:
+        """The file where the install list puts it, before ComfyUI is told to
+        look there - so a re-run does not fetch it again."""
+        destination = self.catalog.model_destination(model, self.models_dir, self.target)
+        if destination.is_file() and (not model.bytes
+                                      or destination.stat().st_size == model.bytes):
+            return destination
+        return None
+
+    # -- models kept outside ComfyUI's own folder -------------------------------
+    YAML_START = "# >>> EasyAI Setup - written from setup-settings.json; edit that file instead"
+    YAML_END = "# <<< EasyAI Setup"
+
+    def register_model_folders(self, models: list[Model]) -> None:
+        """Tell ComfyUI about model folders outside its own models folder.
+
+        setup-settings.json can send models anywhere - another drive, a shared
+        folder - but ComfyUI only looks where it is told. Its own mechanism for
+        that is extra_model_paths.yaml, so Setup keeps a clearly marked block
+        in it and rewrites only that block: anything else in the file is the
+        user's and is left exactly as it was.
+        """
+        extra: dict[str, list[str]] = {}
+        for model in models:
+            folder = self.catalog.model_folder(model, self.models_dir, self.target)
+            if folder == self.models_dir / model.folder:
+                continue                    # ComfyUI's own folder: nothing to add
+            paths = extra.setdefault(model.folder, [])
+            if folder.as_posix() not in paths:
+                paths.append(folder.as_posix())
+
+        yaml = self.comfy / "extra_model_paths.yaml"
+        try:
+            text = yaml.read_text(encoding="utf-8") if yaml.is_file() else ""
+        except OSError:
+            text = ""
+        start, end = text.find(self.YAML_START), text.find(self.YAML_END)
+        if start != -1 and end != -1:
+            text = text[:start].rstrip("\n") + text[end + len(self.YAML_END):]
+            text = text.strip("\n") + ("\n" if text.strip() else "")
+
+        if extra:
+            block = [self.YAML_START, "easyai_setup:"]
+            for kind, paths in sorted(extra.items()):
+                block.append(f"    {kind}: |")
+                block += [f"        {path}" for path in paths]
+            block.append(self.YAML_END)
+            text = (text.rstrip("\n") + "\n\n" if text.strip() else "") + "\n".join(block) + "\n"
+
+        old = yaml.read_text(encoding="utf-8") if yaml.is_file() else ""
+        if text != old and (text.strip() or yaml.is_file()):
+            yaml.parent.mkdir(parents=True, exist_ok=True)
+            yaml.write_text(text, encoding="utf-8")
+            if extra:
+                self._say(t("ComfyUI told to look for models in {n} more folder(s)",
+                            n=sum(len(p) for p in extra.values())))
 
     def _fetch_model(self, model: Model, destination: Path) -> None:
         """Try each source in turn, keeping the first that works.
@@ -349,21 +594,58 @@ class Installer:
 
     # -- 6. the workflows --------------------------------------------------
     def copy_workflows(self) -> None:
-        """Put EasyAI's workflows where a copy of EasyAI will find them."""
-        source_root = ROOT / "workflows"
-        if not source_root.is_dir():
-            return
-        destination_root = self.target / "EasyAI-workflows"
+        """Put each chosen group's workflows where EasyAI will find them.
+
+        Each comes from where the install list says - built into Setup, a file
+        on this machine, or a web link - and goes into its folder under the
+        workflows folder. Its setup file and thumbnail travel with it, so a
+        corrected prompt binding or a picture on the card is not lost.
+        """
+        root = self.catalog.workflows_root(self.target)
+        copied = 0
         for key in self.groups:
-            source = source_root / key
-            if not source.is_dir():
-                continue
-            destination = destination_root / key
-            destination.mkdir(parents=True, exist_ok=True)
-            for path in source.glob("*.json"):
-                shutil.copy2(path, destination / path.name)
-        self._say(t("Workflows copied to {folder}", folder=destination_root.name))
+            for item in self.catalog.groups[key].workflow_items:
+                to = Path(item.to or key)
+                destination = to if to.is_absolute() else root / to
+                try:
+                    self._fetch_workflow(key, item, destination)
+                    copied += 1
+                except (OSError, DownloadError) as e:
+                    self._say("  !! " + t("workflow {name} could not be copied: {problem}",
+                                          name=item.file, problem=e))
+                    self.report.failed.append(f"workflow {item.file}: {e}")
+        self._say(t("{n} workflows copied to {folder}", n=copied, folder=root))
         self.report.done.append("workflows")
+
+    def _workflow_source(self, key: str, item) -> Path | str:
+        """A local file, or the web link to fetch it from."""
+        source = (item.source or "built-in").strip()
+        if source.lower() == "built-in":
+            return ROOT / "workflows" / key / item.file
+        if source.lower().startswith(("http://", "https://")):
+            return source
+        path = Path(source)
+        if not path.is_absolute():
+            base = self.catalog.list_path.parent if self.catalog.list_path else ROOT
+            path = base / path
+        # A folder means "the file of this name inside it".
+        return path / item.file if path.is_dir() else path
+
+    def _fetch_workflow(self, key: str, item, destination: Path) -> None:
+        destination.mkdir(parents=True, exist_ok=True)
+        target = destination / item.file
+        source = self._workflow_source(key, item)
+        if isinstance(source, str):
+            download(source, target, on_progress=self._progress, should_stop=self._stop)
+            return
+        if not source.is_file():
+            raise OSError(t("not found: {path}", path=source))
+        shutil.copy2(source, target)
+        stem = Path(item.file).stem
+        for sidecar in [source.with_name(stem + ".manifest.json")] + [
+                source.with_name(stem + ext) for ext in (".png", ".jpg", ".jpeg", ".webp")]:
+            if sidecar.is_file():
+                shutil.copy2(sidecar, destination / sidecar.name)
 
     # -- 7. point EasyAI at what we just installed -------------------------
     def configure_easyai(self) -> None:
@@ -396,7 +678,7 @@ class Installer:
 
         # The workflows were copied in beside the install; point EasyAI at that
         # copy rather than leaving it looking at an empty folder.
-        workflows = self.target / "EasyAI-workflows"
+        workflows = self.catalog.workflows_root(self.target)
         if any(workflows.glob("*/*.json")):
             cfg.set("workflow_dir", str(workflows))
 
@@ -413,9 +695,12 @@ class Installer:
 
     # -- state -------------------------------------------------------------
     def write_state(self) -> None:
+        # What is really here now, which is not the catalogue's version when
+        # an existing ComfyUI was left as it was.
         state = {
-            "comfyui": self.catalog.comfyui.get("version"),
-            "commit": self.catalog.comfyui.get("commit"),
+            "comfyui": existing.comfyui_version(self.comfy),
+            "commit": existing.git_head(self.comfy),
+            "tested_with": self.catalog.comfyui.get("version"),
             "groups": self.groups,
             "installed": self.report.done,
             "skipped": self.report.skipped,
@@ -430,12 +715,40 @@ class Installer:
 
     # -- helpers -----------------------------------------------------------
     def _git(self, cwd: Path, *args: str, check: bool = True) -> str:
-        result = subprocess.run(["git", *args], cwd=str(cwd), capture_output=True,
+        # core.longpaths: git's own files sit deep inside .git, and an install
+        # folder a few levels down already passes Windows' 260-character limit
+        # there - the clone then fails with "Filename too long".
+        result = subprocess.run(["git", "-c", "core.longpaths=true", *args],
+                                cwd=str(cwd), capture_output=True,
                                 text=True, timeout=1800, creationflags=_NO_WINDOW)
         if check and result.returncode != 0:
             raise subprocess.SubprocessError(
                 (result.stderr or result.stdout or "git failed").strip()[:300])
         return result.stdout
+
+
+def remove_tree(path: Path) -> None:
+    """Delete a folder, including one git has written into.
+
+    Git marks its object files read-only, and on Windows shutil.rmtree gives
+    up on those - with ignore_errors it gives up silently, leaving a folder
+    that a clone then refuses to use, or that blocks putting an add-on back.
+    """
+    path = Path(path)
+    if not path.exists():
+        return
+
+    def unlock(func, name, *_):
+        try:
+            os.chmod(name, stat.S_IWRITE)
+            func(name)
+        except OSError:
+            pass
+
+    if sys.version_info >= (3, 12):
+        shutil.rmtree(path, onexc=unlock)
+    else:                                            # pragma: no cover
+        shutil.rmtree(path, onerror=unlock)
 
 
 def _first_line(error: Exception) -> str:

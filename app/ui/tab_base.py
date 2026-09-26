@@ -28,7 +28,7 @@ from app.modes import Mode
 from app.ratios import read_node_profile
 from app.ui import theme
 from app.ui.widgets import (
-    DropZone, DurationPicker, MegapixelPicker, ModelPicker, PreviewPane,
+    ColumnScroll, DropZone, DurationPicker, MegapixelPicker, ModelPicker, PreviewPane,
     RatioPicker, ResultGallery, Switch, WorkflowList, open_in_explorer,
 )
 from app.workflows.loader import Workflow, scan
@@ -130,9 +130,17 @@ class GenerateTab(QWidget):
         return panel
 
     def _build_middle(self) -> QWidget:
+        """The prompt and every option, scrolling above a fixed Create button.
+
+        A workflow can now ask for a negative prompt, a model, ten reference
+        pictures, shape, detail and length at once, which is more than fits
+        on a laptop screen. Everything above Create scrolls; Create, its
+        progress and the status line stay put, so the button is never scrolled
+        out of reach and the result of a run is always in view.
+        """
         panel = QWidget()
         layout = QVBoxLayout(panel)
-        layout.setContentsMargins(6, 0, 6, 0)
+        layout.setContentsMargins(6, 0, 10, 0)
         layout.setSpacing(10)
 
         prompt_head = QHBoxLayout()
@@ -151,6 +159,22 @@ class GenerateTab(QWidget):
         self.prompt_box.setMinimumHeight(150)
         self.prompt_box.textChanged.connect(self._on_prompt_changed)
         layout.addWidget(self.prompt_box)
+
+        # What to leave out. Only for workflows that have a negative prompt,
+        # and filled with the workflow's own - Anima and the LTX workflows ship
+        # long ones that nobody could see before, so the box shows what is
+        # really in use rather than an empty field that suggests nothing is.
+        self.negative_label = QLabel(t("NEGATIVE PROMPT"))
+        self.negative_label.setObjectName("Heading")
+        self.negative_label.setVisible(False)
+        layout.addWidget(self.negative_label)
+        self.negative_box = QTextEdit()
+        self.negative_box.setAcceptRichText(False)
+        self.negative_box.setPlaceholderText(
+            t("What you do not want to see - leave empty for nothing."))
+        self.negative_box.setFixedHeight(66)
+        self.negative_box.setVisible(False)
+        layout.addWidget(self.negative_box)
 
         # Drop zones are rebuilt for each workflow, because how many files a
         # workflow wants - and what to call them - comes from its manifest.
@@ -234,7 +258,22 @@ class GenerateTab(QWidget):
         self.seed_lock.setVisible(False)
         layout.addWidget(self.seed_lock)
 
-        layout.addSpacing(4)
+        layout.addStretch(1)
+
+        self.middle_scroll = ColumnScroll()
+        self.middle_scroll.setWidget(panel)
+
+        column = QWidget()
+        outer = QVBoxLayout(column)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+        outer.addWidget(self.middle_scroll, 1)
+
+        footer = QWidget()
+        layout = QVBoxLayout(footer)
+        layout.setContentsMargins(6, 8, 10, 0)
+        layout.setSpacing(10)
+        outer.addWidget(footer)
 
         self.create_btn = QPushButton(t("Create {what}", what=t(self.mode.label)))
         self.create_btn.setObjectName("Primary")
@@ -261,8 +300,7 @@ class GenerateTab(QWidget):
         self.status_label.setObjectName("Hint")
         self.status_label.setWordWrap(True)
         layout.addWidget(self.status_label)
-        layout.addStretch(1)
-        return panel
+        return column
 
     def _on_prompt_changed(self) -> None:
         count = len(self.prompt_box.toPlainText())
@@ -304,7 +342,7 @@ class GenerateTab(QWidget):
     # ------------------------------------------------------------- loading
     def reload(self, check: bool = True, refresh: bool = False) -> None:
         """Rescan the workflow folder and re-run the pre-flight check."""
-        root = self.cfg.get("workflow_dir")
+        root = self.cfg.workflow_dir()
 
         # Read the node catalogue first: which file inputs may be left empty is
         # a question only the running ComfyUI can answer, and the manifest is
@@ -426,7 +464,8 @@ class GenerateTab(QWidget):
             self.prompt_box.setPlaceholderText(
                 "This workflow does not take a prompt — just press Create.")
 
-        self._rebuild_drop_zones(manifest)
+        self._show_negative(manifest, wf)
+        self._rebuild_drop_zones(manifest, wf)
 
         if self.mode.uses_ratio:
             can_set = bool(manifest and manifest.can_set_ratio)
@@ -533,7 +572,7 @@ class GenerateTab(QWidget):
         binding = manifest.get("ratio")
         return read_node_profile(workflow.graph.get(binding.node))
 
-    def _rebuild_drop_zones(self, manifest) -> None:
+    def _rebuild_drop_zones(self, manifest, wf=None) -> None:
         """One labelled drop zone per file the selected workflow asks for.
 
         Any file the user already chose is carried over when it lines up with a
@@ -555,6 +594,14 @@ class GenerateTab(QWidget):
 
         self.drop_hint.setVisible(bool(manifest.has_optional_files))
 
+        # Reference groups EasyAI filled out to the node's real capacity - ten
+        # for Qwen Image 2.1 - are shown one slot at a time. The node numbers
+        # pictures by position, so a gap would quietly turn the third picture
+        # into <image 2>; revealing the next slot only once the one before is
+        # filled makes a gap impossible.
+        self._reveal_groups = (manifest.grown_slot_groups(wf.graph)
+                               if manifest and wf is not None else [])
+
         for key in slots:
             kind = slot_kind(key)
             extensions = {"image": _IMAGE_EXT, "audio": _AUDIO_EXT,
@@ -568,19 +615,50 @@ class GenerateTab(QWidget):
                 zone.set_path(previous[key])
             self.drop_zones[key] = zone
             self.drop_layout.addWidget(zone)
+            if any(key in group for group in self._reveal_groups):
+                zone.changed.connect(lambda _path: self._reveal_next())
 
         self.drop_scroll.setVisible(True)
+        self._reveal_next()
 
+    def _reveal_next(self) -> None:
+        """Keep each grown reference group gap-free, then resize the area.
+
+        Emptying a slot in the middle moves the pictures after it up one, so
+        what is attached always runs Reference 1, 2, 3... with the next empty
+        slot waiting underneath.
+        """
+        if getattr(self, "_revealing", False):
+            return
+        self._revealing = True
+        try:
+            for group in getattr(self, "_reveal_groups", []):
+                zones = [self.drop_zones[k] for k in group if k in self.drop_zones]
+                paths = [z.path() for z in zones if z.path()]
+                for index, zone in enumerate(zones):
+                    wanted = paths[index] if index < len(paths) else ""
+                    if zone.path() != wanted:
+                        zone.set_path(wanted)
+                    zone.setVisible(index <= len(paths))
+        finally:
+            self._revealing = False
+        self._size_drop_area()
+
+    def _size_drop_area(self) -> None:
+        shown = [z for z in self.drop_zones.values() if not z.isHidden()]
+        if not shown:
+            return
         # The scroll area is widgetResizable, which squashes the inner widget to
         # the viewport and lets the boxes draw outside it. Sizing the holder to
         # its real content is what makes the scrollbar appear instead.
-        one = 78 if len(slots) > 3 else 102
+        one = 78 if len(self.drop_zones) > 3 else 102
         spacing = self.drop_layout.spacing()
-        self.drop_holder.setFixedHeight(len(slots) * one + max(0, len(slots) - 1) * spacing)
+        self.drop_holder.setFixedHeight(len(shown) * one + max(0, len(shown) - 1) * spacing)
         # Show three at a time, so the prompt box and Create stay on screen
         # even when a workflow wants ten reference pictures.
-        self.drop_scroll.setFixedHeight(min(len(slots), 3) * one
-                                        + min(len(slots), 3) * spacing)
+        self.drop_scroll.setFixedHeight(min(len(shown), 3) * one
+                                        + min(len(shown), 3) * spacing)
+        self.middle_scroll.updateGeometry()
 
     def _preview_message(self, text: str) -> None:
         if self.preview is not None:
@@ -591,9 +669,19 @@ class GenerateTab(QWidget):
             self.preview.show_file(path)
 
     def _set_controls_enabled(self, enabled: bool) -> None:
-        for widget in (self.prompt_box, self.create_btn, self.ratio_picker,
-                       self.setup_btn):
+        for widget in (self.prompt_box, self.negative_box, self.create_btn,
+                       self.ratio_picker, self.setup_btn):
             widget.setEnabled(enabled)
+
+    def _show_negative(self, manifest, wf) -> None:
+        """Show the negative prompt box, holding this workflow's own text."""
+        binding = manifest.get("negative") if manifest else None
+        self.negative_label.setVisible(binding is not None)
+        self.negative_box.setVisible(binding is not None)
+        if binding is None:
+            return
+        value = ((wf.graph.get(binding.node) or {}).get("inputs") or {}).get(binding.input)
+        self.negative_box.setPlainText(value if isinstance(value, str) else "")
 
     def _rename_workflow(self, wf: Workflow) -> None:
         """Give a workflow a friendly name for the list.
@@ -668,6 +756,11 @@ class GenerateTab(QWidget):
     def _collect_request(self, wf: Workflow) -> GenerationRequest:
         manifest = wf.manifest
         request = GenerationRequest(prompt=self.prompt_box.toPlainText().strip())
+        # Sent whenever the box is offered: it starts out holding the
+        # workflow's own text, so leaving it alone changes nothing, and
+        # emptying it really does mean "no negative".
+        if not self.negative_box.isHidden() and manifest.has("negative"):
+            request.negative = self.negative_box.toPlainText().strip()
 
         # Snapshotted here, like everything else, so a queued item keeps the
         # model that was chosen when Create was pressed.
@@ -866,6 +959,9 @@ class GenerateTab(QWidget):
             t("Change which parts of this workflow EasyAI controls"))
         self.prompt_label.setText(t("What do you want to make?"))
         self.prompt_box.setPlaceholderText(t(self.mode.prompt_hint))
+        self.negative_label.setText(t("NEGATIVE PROMPT"))
+        self.negative_box.setPlaceholderText(
+            t("What you do not want to see - leave empty for nothing."))
         self._on_prompt_changed()
         self.drop_hint.setText(
             t("Attach only the ones you want — leave the rest empty."))

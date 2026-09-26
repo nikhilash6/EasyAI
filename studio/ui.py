@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
     QStackedWidget, QVBoxLayout, QWidget,
 )
 
-from app import i18n
+from app import VERSION_LABEL, i18n
 from app.i18n import t
 from app.ui import theme
 from studio.pages import CataloguePage, LanguagePage, LinksPage
@@ -22,7 +22,7 @@ from studio.pages import CataloguePage, LanguagePage, LinksPage
 class StudioWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle(t("EasyAI Studio"))
+        self.setWindowTitle(f"{t('EasyAI Studio')}  ·  {VERSION_LABEL}")
         self.resize(1040, 760)
         self.setMinimumSize(880, 620)
         icon = theme.app_icon()
@@ -98,7 +98,7 @@ class StudioWindow(QMainWindow):
         row = self.nav.currentRow()
         i18n.load(code)
         i18n.remember(code)
-        self.setWindowTitle(t("EasyAI Studio"))
+        self.setWindowTitle(f"{t('EasyAI Studio')}  ·  {VERSION_LABEL}")
         self._build()
         self.nav.setCurrentRow(max(0, row))
 

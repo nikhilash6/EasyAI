@@ -1,0 +1,47 @@
+{
+  "version": 3,
+  "name": "Qwen Image 2.1 - Text to Image",
+  "mode": "image",
+  "engine": "qwen-image",
+  "bindings": {
+    "prompt": {
+      "node": "459:452",
+      "input": "prompt"
+    },
+    "negative": {
+      "node": "459:452",
+      "input": "negative_prompt"
+    },
+    "model": {
+      "node": "459:451",
+      "input": "unet_name"
+    },
+    "ratio": {
+      "node": "13",
+      "input": "aspect_ratio"
+    },
+    "megapixels": {
+      "node": "13",
+      "input": "megapixels"
+    },
+    "seed": {
+      "node": "459:458",
+      "input": "seed"
+    },
+    "output": {
+      "node": "461",
+      "input": "filename_prefix"
+    }
+  },
+  "labels": {},
+  "optional_slots": [],
+  "length_unit": "frames",
+  "fps": 8,
+  "grow": [],
+  "expose": [
+    "prompt"
+  ],
+  "ambiguous": [],
+  "autodetected": true,
+  "notes": ""
+}

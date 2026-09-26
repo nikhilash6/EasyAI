@@ -46,6 +46,9 @@ class Model:
     gated: bool = False             # confirmed to need an account, not guessed
     mirror: str | None = None       # our own copy, for files behind a sign-in
     sha256: str = ""                # recorded for mirrored files, see sources()
+    #: A folder of its own, from setup-settings.json. Empty means the models
+    #: folder's own subfolder for this kind ("unet", "loras"...).
+    to: str = ""
 
     @property
     def filename(self) -> str:
@@ -97,6 +100,19 @@ class NodePack:
 
 
 @dataclass
+class WorkflowItem:
+    """One workflow to install, from where to where.
+
+    ``source`` is "built-in" (shipped inside EasyAI Setup), a file path, or a
+    web link. ``to`` is a folder under the workflows folder - normally the
+    group's own, such as "image" - or a full path.
+    """
+    file: str
+    source: str = "built-in"
+    to: str = ""
+
+
+@dataclass
 class Group:
     key: str
     label: str
@@ -104,20 +120,32 @@ class Group:
     nodes: list[str] = field(default_factory=list)
     workflows: list[str] = field(default_factory=list)
     bytes: int = 0
+    workflow_items: list[WorkflowItem] = field(default_factory=list)
+
+
+#: Where things go when nothing says otherwise: models into the ComfyUI being
+#: installed, workflows into a folder beside it that EasyAI is pointed at.
+DEFAULT_FOLDERS = {"models": "", "workflows": "EasyAI-workflows"}
 
 
 class Catalog:
     """Everything EasyAISetup can install."""
 
-    def __init__(self, path: Path | str = CATALOG_PATH):
+    def __init__(self, path: Path | str = CATALOG_PATH, raw: dict | None = None,
+                 list_path: Path | None = None):
         self.path = Path(path)
-        raw = json.loads(self.path.read_text(encoding="utf-8"))
+        if raw is None:
+            raw = json.loads(self.path.read_text(encoding="utf-8"))
+        #: The editable setup-settings.json this came from, if any. Workflow
+        #: sources given as relative paths are read from beside it.
+        self.list_path = Path(list_path) if list_path else None
+        self.folders = {**DEFAULT_FOLDERS, **(raw.get("folders") or {})}
         self.comfyui: dict = raw["comfyui"]
         self.models = {
             name: Model(name=name, folder=e.get("dir", "checkpoints"),
                         url=e.get("url"), bytes=e.get("bytes", 0),
                         gated=bool(e.get("gated")), mirror=e.get("mirror"),
-                        sha256=e.get("sha256", ""))
+                        sha256=e.get("sha256", ""), to=str(e.get("to") or ""))
             for name, e in raw["models"].items()
         }
         self.nodes = {
@@ -129,9 +157,38 @@ class Catalog:
         self.groups = {
             key: Group(key=key, label=g.get("label", key), models=g.get("models", []),
                        nodes=g.get("nodes", []), workflows=g.get("workflows", []),
-                       bytes=g.get("bytes", 0))
+                       bytes=g.get("bytes", 0),
+                       workflow_items=[
+                           WorkflowItem(file=str(w.get("file", "")),
+                                        source=str(w.get("from") or "built-in"),
+                                        to=str(w.get("to") or ""))
+                           for w in g.get("workflow_items") or []]
+                       or [WorkflowItem(file=f) for f in g.get("workflows", [])])
             for key, g in raw["groups"].items()
         }
+
+    # -- where things go -----------------------------------------------------
+    def models_root(self, comfy_models: Path, target: Path) -> Path:
+        """The folder models go under: ComfyUI's own unless the list says."""
+        return _resolve(self.folders.get("models") or "", Path(target), Path(comfy_models))
+
+    def model_destination(self, model: Model, comfy_models: Path, target: Path) -> Path:
+        """The exact file a model is written to.
+
+        A model's folder is either one under the models folder ("unet") or a
+        full path of its own; the subfolder in its name is kept either way,
+        because that is what the workflow asks ComfyUI for.
+        """
+        return self.model_folder(model, comfy_models, target) / Path(model.name.replace("\\", "/"))
+
+    def model_folder(self, model: Model, comfy_models: Path, target: Path) -> Path:
+        """The folder a model's name is resolved in - what ComfyUI must search."""
+        default = self.models_root(comfy_models, target) / model.folder
+        return _resolve(model.to, Path(target), default)
+
+    def workflows_root(self, target: Path) -> Path:
+        return _resolve(self.folders.get("workflows") or DEFAULT_FOLDERS["workflows"],
+                        Path(target), Path(target) / DEFAULT_FOLDERS["workflows"])
 
     # -- selections --------------------------------------------------------
     def models_for(self, groups) -> list[Model]:
@@ -177,6 +234,16 @@ class Catalog:
     def mirrored(self, groups) -> list[Model]:
         """Chosen models served from our own copy rather than their origin."""
         return [m for m in self.models_for(groups) if m.mirror]
+
+
+def _resolve(value: str, target: Path, default: Path) -> Path:
+    """A folder setting: empty means the default, relative means inside the
+    install folder, and a full path is used exactly as written."""
+    value = (value or "").strip()
+    if not value:
+        return default
+    path = Path(value)
+    return path if path.is_absolute() else target / path
 
 
 def human_bytes(n: float) -> str:
